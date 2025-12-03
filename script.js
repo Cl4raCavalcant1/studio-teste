@@ -480,7 +480,6 @@ if ("serviceWorker" in navigator) {
 /* ===========================================================
    EVENTOS — Não conflitar com agenda existente
 =========================================================== */
-
 function renderEventos() {
     content.innerHTML = `
     <div class='card'>
@@ -492,13 +491,17 @@ function renderEventos() {
             ${CL.map(c => `<option value="${c.nome}">${c.nome}</option>`).join("")}
         </select>
 
-        <label>Data</label>
-        <input type="date" id="ev_data">
-
-        <label>Horário</label>
-        <select id="ev_hora">
-            ${HORARIOS.map(h => `<option value="${h}">${h}</option>`).join("")}
+        <label>Dia inteiro?</label>
+        <select id="ev_diaInteiro" onchange="toggleEventoHorario()">
+            <option value="nao">Não</option>
+            <option value="sim">Sim</option>
         </select>
+
+        <label>Data</label>
+        <input type="date" id="ev_data" onchange="carregarHorariosEvento()">
+
+        <label id="lbl_hora">Horário</label>
+        <select id="ev_hora"></select>
 
         <div class="row">
             <button class="btn" onclick="saveEvento()">Salvar</button>
@@ -508,46 +511,94 @@ function renderEventos() {
 
     <div class="card">
         <h3>📄 Lista de Eventos</h3>
-
         <input type="date" id="ev_filter" onchange="showEventos()">
-
         <div id="ev_list" style="margin-top:15px">Selecione uma data</div>
     </div>
     `;
+
+    toggleEventoHorario();
+}
+
+function toggleEventoHorario() {
+    const diaInteiro = ev_diaInteiro.value === "sim";
+    document.getElementById("lbl_hora").style.display = diaInteiro ? "none" : "block";
+    ev_hora.style.display = diaInteiro ? "none" : "block";
+}
+
+function carregarHorariosEvento() {
+    const data = ev_data.value;
+    if (!data) return;
+
+    const existeDiaInteiro = EV.some(e => e.data === data && e.diaInteiro);
+
+    const agendados = AG.filter(a => a.data === data).map(a => a.hora);
+    const eventos = EV.filter(e => e.data === data && !e.diaInteiro).map(e => e.hora);
+
+    let html = `<option value="">Selecione</option>`;
+
+    HORARIOS.forEach(h => {
+        if (existeDiaInteiro || agendados.includes(h) || eventos.includes(h)) {
+            html += `<option disabled>${h} — Ocupado</option>`;
+        } else {
+            html += `<option value="${h}">${h}</option>`;
+        }
+    });
+
+    ev_hora.innerHTML = html;
 }
 
 function saveEvento() {
     const cliente = ev_cliente.value;
     const data = ev_data.value;
     const hora = ev_hora.value;
+    const diaInteiro = ev_diaInteiro.value === "sim";
 
-    if (!cliente || !data || !hora) {
+    if (!cliente || !data) {
         alert("Preencha todos os campos.");
         return;
     }
 
-    // Verificar conflito com agenda
+    // Dia inteiro → bloqueia o dia
+    if (diaInteiro) {
+        const temAgenda = AG.some(a => a.data === data);
+        const temEvento = EV.some(e => e.data === data);
+
+        if (temAgenda || temEvento) {
+            alert("⚠️ Já existe compromisso neste dia.");
+            return;
+        }
+
+        EV.push({
+            id: Date.now(),
+            cliente,
+            data,
+            hora: null,
+            diaInteiro: true
+        });
+
+        save("albany_eventos", EV);
+        alert("Evento de dia inteiro salvo!");
+        showEventos();
+        return;
+    }
+
+    // Evento com horário → validar conflito
+    if (!hora) return alert("Selecione o horário.");
+
     const conflitoAgenda = AG.some(a => a.data === data && a.hora === hora);
-
-    if (conflitoAgenda) {
-        alert("⚠️ Já existe um AGENDAMENTO neste dia e horário.");
-        return;
-    }
-
-    // Verificar conflito com outros eventos
     const conflitoEvento = EV.some(e => e.data === data && e.hora === hora);
+    const diaBloqueado = EV.some(e => e.data === data && e.diaInteiro);
 
-    if (conflitoEvento) {
-        alert("⚠️ Já existe um EVENTO neste dia e horário.");
-        return;
-    }
+    if (diaBloqueado) return alert("⚠️ O dia está bloqueado por um evento de dia inteiro.");
+    if (conflitoAgenda) return alert("⚠️ Agendamento já existe neste horário.");
+    if (conflitoEvento) return alert("⚠️ Evento já existe neste horário.");
 
-    // Salvar
     EV.push({
         id: Date.now(),
         cliente,
         data,
-        hora
+        hora,
+        diaInteiro: false
     });
 
     save("albany_eventos", EV);
@@ -560,7 +611,7 @@ function showEventos() {
     if (!d) return;
 
     const lista = EV.filter(e => e.data === d)
-                    .sort((a,b)=>a.hora.localeCompare(b.hora));
+                    .sort((a,b)=> (a.hora || "00:00").localeCompare(b.hora || "00:00"));
 
     if (!lista.length) {
         ev_list.innerHTML = "<p>Nenhum evento nesta data.</p>";
@@ -570,17 +621,12 @@ function showEventos() {
     let html = "";
     lista.forEach(e => {
         html += `
-        <div style="padding:12px;border-left:6px solid var(--accent);
-                    margin-bottom:10px;background:var(--card);
-                    border-radius:10px">
-            <div style="display:flex;justify-content:space-between">
-                <div>
-                    <strong>${e.hora}</strong> — ${e.cliente}
-                </div>
-                <button class="btn danger" onclick="delEvento(${e.id})">Excluir</button>
-            </div>
-        </div>
-        `;
+<div style="padding:12px;border-left:6px solid var(--accent);margin-bottom:10px;background:var(--card);border-radius:10px">
+    <div style="display:flex;justify-content:space-between">
+        <div><strong>${e.diaInteiro ? "Dia inteiro" : e.hora}</strong> — ${e.cliente}</div>
+        <button class="btn danger" onclick="delEvento(${e.id})">Excluir</button>
+    </div>
+</div>`;
     });
 
     ev_list.innerHTML = html;
@@ -588,7 +634,6 @@ function showEventos() {
 
 function delEvento(id) {
     if (!confirm("Excluir evento?")) return;
-
     EV = EV.filter(e => e.id !== id);
     save("albany_eventos", EV);
     showEventos();
