@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Studio Albany — Sistema Profissional</title>
+
+<link rel="manifest" href="manifest.json">
+
+<style>
+/* === ROOT VARIÁVEIS === */
+:root{
+    --bg:#f4f4f6;
+    --card:#ffffff;
+    --text:#222;
+    --accent:#b7924b;
+    --accent-dark:#8c6d32;
+    --muted:#ccc;
+    --success:#2e7d32;
+    --warning:#ef6c00;
+    --danger:#c62828;
+    --radius:14px;
+    --shadow:0 8px 24px rgba(0,0,0,0.08);
+}
+[data-theme="dark"]{
+    --bg:#0f0f12;
+    --card:#161617;
+    --text:#f2f2f2;
+    --muted:#444;
+    --accent:#c7a96a;
+    --accent-dark:#8c6d32;
+}
+
+/* === BASE === */
+body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:Inter, Arial, sans-serif;
+    transition:0.3s ease;
+}
+.app{
+    max-width:1400px;
+    margin:20px auto;
+    display:grid;
+    grid-template-columns:270px 1fr;
+    gap:20px;
+    padding:10px;
+}
+
+/* === SIDEBAR === */
+.sidebar{
+    background:var(--card);
+    padding:20px;
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    display:flex;
+    flex-direction:column;
+    height:calc(100vh - 60px);
+    position:sticky;
+    top:20px;
+}
+.brand{
+    text-align:center;
+    font-size:22px;
+    font-weight:800;
+    color:var(--accent);
+    letter-spacing:1px;
+    margin-bottom:20px;
+}
+.menu{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+.menu button{
+    padding:12px;
+    border-radius:10px;
+    border:none;
+    cursor:pointer;
+    font-weight:600;
+    background:var(--accent);
+    color:#fff;
+    transition:0.2s;
+}
+.menu button:hover{ background:var(--accent-dark); }
+
+.theme-btn{
+    margin-top:auto;
+    padding:12px;
+    border-radius:10px;
+    border:1px solid var(--muted);
+    background:transparent;
+    cursor:pointer;
+    color:var(--text);
+}
+.theme-btn:hover{ border-color:var(--accent); color:var(--accent); }
+
+/* === CONTENT === */
+.content{ padding:10px; }
+.card{
+    background:var(--card);
+    padding:22px;
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    margin-bottom:20px;
+}
+
+/* === FORM === */
+label{ font-size:14px;margin-top:12px;display:block;color:var(--text); }
+input, select, textarea{
+    width:100%;
+    padding:12px;
+    margin-top:6px;
+    border-radius:10px;
+    border:1px solid var(--muted);
+    background:transparent;
+    color:var(--text);
+}
+.row{ display:flex; gap:10px; align-items:center; margin-top:12px; }
+
+.btn{
+    padding:10px 14px;
+    border-radius:10px;
+    border:none;
+    cursor:pointer;
+    font-weight:600;
+    background:var(--accent);
+    color:#fff;
+}
+.btn.ghost{
+    background:transparent;
+    border:1px solid var(--muted);
+    color:var(--text);
+}
+.btn.danger{ background:var(--danger); color:#fff; }
+
+/* === TABELAS === */
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:16px;
+}
+th,td{
+    padding:12px;
+    border-bottom:1px solid var(--muted);
+    font-size:14px;
+}
+th{ font-weight:700; color:var(--accent-dark); }
+
+/* === STATUS === */
+.status-pill{
+    padding:6px 14px;
+    border-radius:50px;
+    color:#fff;
+    font-size:12px;
+    font-weight:700;
+}
+.st-confirmado{ background:var(--success); }
+.st-cancelado{ background:var(--danger); }
+.st-remarcado{ background:var(--warning); }
+
+/* === RESPONSIVO === */
+@media(max-width:980px){
+    .app{ grid-template-columns:1fr; }
+    .sidebar{ position:relative; height:auto; }
+}
+</style>
+</head>
+
+<body data-theme="light">
+
+<div class="app">
+    <aside class="sidebar">
+        <div class="brand">Albany Fotografias</div>
+        <div class="menu">
+            <button onclick="nav('home')">Página Inicial</button>
+            <button onclick="nav('agenda')">Agendamentos</button>
+            <button onclick="nav('clientes')">Clientes</button>
+            <button onclick="nav('vendas')">Vendas</button>
+            <button onclick="nav('dashboard')">Dashboard</button>
+            <button onclick="nav('eventos')">Eventos</button>
+
+        </div>
+        <button class="theme-btn" onclick="toggleTheme()">Alternar Tema</button>
+    </aside>
+
+    <main class="content" id="content"></main>
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
