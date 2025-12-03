@@ -348,7 +348,7 @@ function delCliente(id) {
 }
 
 /* ===========================================================
-   PAGAMENTOS (CORRIGIDO)
+   PAGAMENTOS (CORRIGIDO E COM CORTESIA)
 =========================================================== */
 function renderPagamentos() {
     const content = document.getElementById('content');
@@ -364,13 +364,22 @@ function renderPagamentos() {
 
         <label>Pacote</label>
         <select id='p_pac' onchange="atualizarPrevisao()">
-            <option value='p1'>Pacote 1 - R$70</option>
-            <option value='p2'>Pacote 2 - R$100</option>
+            <option value='p1'>Pacote 1 - R$70 (Extra R$10)</option>
+            <option value='p2'>Pacote 2 - R$100 (Extra R$15)</option>
             <option value='cortesia'>Cortesia</option>
         </select>
 
-        <label>Extras (quantidade)</label>
-        <input type="number" id="p_ext" value="0" min="0" onchange="atualizarPrevisao()">
+        <div class="row">
+            <div style="flex:1">
+                <label>Extras Pagos (Qtd)</label>
+                <input type="number" id="p_ext" value="0" min="0" onchange="atualizarPrevisao()">
+            </div>
+            <div style="flex:1">
+                <label>Cortesias (Qtd)</label>
+                <input type="number" id="p_cortesia" value="0" min="0" onchange="atualizarPrevisao()">
+            </div>
+        </div>
+        <p id="feedback_cortesia" style="font-size:13px;color:#d32f2f;margin:5px 0 0 0;display:none;font-weight:bold"></p>
 
         <label>Valor total (R$)</label>
         <input type="number" id="p_total" placeholder="Ex: 150" step="0.01">
@@ -425,25 +434,42 @@ function calcTotal(p, e) {
     return 0;
 }
 
-/* Atualiza o campo de preço automaticamente */
+/* Atualiza o campo de preço automaticamente e mostra perda de cortesia */
 function atualizarPrevisao() {
     const pac = document.getElementById('p_pac').value;
-    const ext = document.getElementById('p_ext').value;
+    const ext = document.getElementById('p_ext').value; // Pagas
+    const cortesia = Number(document.getElementById('p_cortesia').value || 0);
     const elTotal = document.getElementById('p_total');
+    const fbCortesia = document.getElementById('feedback_cortesia');
     
-    // Só atualiza se não for cortesia, para dar sugestão de preço
+    // Atualiza Total a Cobrar
     const valor = calcTotal(pac, ext);
     if (pac !== 'cortesia') {
         elTotal.value = valor.toFixed(2);
     } else {
         elTotal.value = "0.00";
     }
+
+    // Calcula Perda com Cortesia
+    let precoExtra = 0;
+    if (pac === 'p1') precoExtra = 10;
+    if (pac === 'p2') precoExtra = 15;
+    
+    const valorPerdido = cortesia * precoExtra;
+    
+    if (valorPerdido > 0) {
+        fbCortesia.style.display = 'block';
+        fbCortesia.innerText = `⚠️ Valor em cortesias (não cobrado): R$ ${valorPerdido.toFixed(2)}`;
+    } else {
+        fbCortesia.style.display = 'none';
+    }
 }
 
 function savePagamentoVenda() {
     const nome = document.getElementById('p_cliente').value;
     const pacote = document.getElementById('p_pac').value;
-    const extras = Number(document.getElementById('p_ext').value || 0);
+    const extras = Number(document.getElementById('p_ext').value || 0); // Pagas
+    const cortesia = Number(document.getElementById('p_cortesia').value || 0); // Grátis
     const totalInput = Number(document.getElementById('p_total').value || 0);
     const pagoAgora = Number(document.getElementById('p_pago_agora').value || 0);
     const forma = document.getElementById('p_forma').value;
@@ -452,16 +478,24 @@ function savePagamentoVenda() {
     
     const totalFinal = totalInput > 0 ? totalInput : calcTotal(pacote, extras);
 
-    // Validação: Só reclama se for zero e NÃO for cortesia
+    // Validação
     if (totalFinal <= 0 && pacote !== "cortesia") {
         return alert("Informe o valor total do serviço.");
     }
+
+    // Calcula valor estimado da cortesia
+    let precoExtra = 0;
+    if (pacote === 'p1') precoExtra = 10;
+    if (pacote === 'p2') precoExtra = 15;
+    const valorCortesia = cortesia * precoExtra;
 
     const venda = {
         id: Date.now(),
         nome,
         pacote,
         extras,
+        cortesia,
+        valorCortesia,
         total: Number(totalFinal.toFixed(2)),
         pagamentos: [],
         createdAt: new Date().toISOString()
@@ -555,10 +589,18 @@ function openPagamentoDetalhes(id) {
     const falta = Math.max(0, v.total - pago);
     const container = document.getElementById("p_details_container");
 
+    // Lógica visual da cortesia nos detalhes
+    let infoCortesia = "";
+    if (v.cortesia > 0) {
+        infoCortesia = `<p style="color:#d32f2f"><strong>Cortesias:</strong> ${v.cortesia} fotos (Deixou de ganhar: R$ ${Number(v.valorCortesia||0).toFixed(2)})</p>`;
+    }
+
     let html = `
     <div class="card" style="border:2px solid var(--accent)">
         <h3>Detalhes — ${v.nome}</h3>
-        <p><strong>Pacote:</strong> ${v.pacote} — <strong>Total:</strong> R$ ${v.total.toFixed(2)}</p>
+        <p><strong>Pacote:</strong> ${v.pacote} — <strong>Extras Pagos:</strong> ${v.extras || 0}</p>
+        ${infoCortesia}
+        <p><strong>Total a Receber:</strong> R$ ${v.total.toFixed(2)}</p>
         <p><strong>Pago:</strong> R$ ${pago.toFixed(2)} — <strong style="color:${falta>0?'red':'green'}">Falta: R$ ${falta.toFixed(2)}</strong></p>
 
         <h4>Histórico de pagamentos</h4>
@@ -636,7 +678,10 @@ function baixarVendaPDF(id) {
     const pago = totalPago(v);
     const falta = Math.max(0, v.total - pago);
 
-    let doc = `Venda: ${v.nome}\nPacote: ${v.pacote}\nTotal: R$ ${v.total.toFixed(2)}\n\nPagamentos:\n`;
+    let doc = `Venda: ${v.nome}\nPacote: ${v.pacote}\nTotal: R$ ${v.total.toFixed(2)}\n`;
+    if (v.cortesia > 0) doc += `Cortesias: ${v.cortesia} fotos (R$ ${Number(v.valorCortesia).toFixed(2)})\n`;
+    doc += `\nPagamentos:\n`;
+
     if (!v.pagamentos.length) doc += "Nenhum.\n";
     else {
         v.pagamentos.forEach(p => {
