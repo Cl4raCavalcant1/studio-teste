@@ -62,7 +62,8 @@ function renderHome() {
             html += `
             <div style="padding:12px;border-left:6px solid var(--accent);
                         border-radius:10px;background:var(--card);margin-bottom:10px">
-                <strong>${e.diaInteiro ? "Dia inteiro" : e.hora}</strong> — ${e.cliente}
+                <strong>${e.diaInteiro ? "Dia inteiro" : e.hora}</strong> — ${e.cliente}<br>
+                <small>${e.tipo || 'Evento'}</small>
             </div>
             `;
         });
@@ -97,7 +98,7 @@ function renderHome() {
                 let corpo = "";
                 if (evHoje.length) {
                     corpo += "Eventos:\n" + evHoje.map(e =>
-                        `${e.diaInteiro ? "Dia inteiro" : e.hora} — ${e.cliente}`
+                        `${e.diaInteiro ? "Dia inteiro" : e.hora} — ${e.cliente} (${e.tipo || ''})`
                     ).join("\n") + "\n\n";
                 }
                 if (agHoje.length) {
@@ -687,6 +688,24 @@ function renderEventos() {
             <option value="">Selecione</option>
             ${CL.map(c => `<option value="${c.nome}">${c.nome}</option>`).join("")}
         </select>
+        
+        <label>Tipo de Evento</label>
+        <select id="ev_tipo">
+            <option value="">Selecione</option>
+            <option value="Pre Wedding">Pre Wedding</option>
+            <option value="Casamento">Casamento</option>
+            <option value="Batizado">Batizado</option>
+            <option value="Chá revelação">Chá revelação</option>
+            <option value="Inauguração de Loja">Inauguração de Loja</option>
+            <option value="Festa Infantil">Festa Infantil</option>
+            <option value="Festa de Adulto">Festa de Adulto</option>
+            <option value="Formatura">Formatura</option>
+            <option value="Ensaio Externo Formatura Infantil">Ensaio Externo Formatura Infantil</option>
+            <option value="Ensaio Externo Formatura Adulto">Ensaio Externo Formatura Adulto</option>
+            <option value="Ensaio Externo">Ensaio Externo</option>
+            <option value="Outros">Outros</option>
+        </select>
+
         <label>Dia inteiro?</label>
         <select id="ev_diaInteiro" onchange="toggleEventoHorario()">
             <option value="nao">Não</option>
@@ -736,15 +755,20 @@ function carregarHorariosEvento() {
 
 function saveEvento() {
     const cliente = document.getElementById("ev_cliente").value;
+    const tipo = document.getElementById("ev_tipo").value;
     const data = document.getElementById("ev_data").value;
     const hora = document.getElementById("ev_hora").value;
     const diaInteiro = document.getElementById("ev_diaInteiro").value === "sim";
 
-    if (!cliente || !data) return alert("Preencha os campos.");
+    if (!cliente || !data || !tipo) return alert("Preencha todos os campos obrigatórios.");
     
     EV.push({
         id: Date.now(),
-        cliente, data, hora: diaInteiro ? null : hora, diaInteiro
+        cliente, 
+        tipo, 
+        data, 
+        hora: diaInteiro ? null : hora, 
+        diaInteiro
     });
     save("albany_eventos", EV);
     alert("Evento salvo!");
@@ -764,7 +788,10 @@ function showEventos() {
     let html = "";
     lista.forEach(e => {
         html += `<div style="padding:10px;border-bottom:1px solid #ddd;display:flex;justify-content:space-between">
-            ${e.cliente} - ${e.diaInteiro ? "Dia Todo" : e.hora}
+            <div>
+                <strong>${e.diaInteiro ? "Dia Todo" : e.hora}</strong> — ${e.cliente}<br>
+                <small>${e.tipo || 'Evento'}</small>
+            </div>
             <button class="btn danger" onclick="delEvento(${e.id})">Excluir</button>
         </div>`;
     });
