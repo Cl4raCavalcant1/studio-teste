@@ -43,11 +43,11 @@ function renderHome() {
 
     /* Agendamentos do dia */
     const agHoje = AG.filter(a => a.data === hoje)
-                     .sort((a,b)=> (a.hora || "00:00").localeCompare(b.hora || "00:00"));
+                      .sort((a,b)=> (a.hora || "00:00").localeCompare(b.hora || "00:00"));
 
     /* Eventos do dia */
     const evHoje = EV.filter(e => e.data === hoje)
-                     .sort((a,b)=> (a.hora || "00:00").localeCompare(b.hora || "00:00"));
+                      .sort((a,b)=> (a.hora || "00:00").localeCompare(b.hora || "00:00"));
 
     let html = `
     <div class='card'>
@@ -61,7 +61,7 @@ function renderHome() {
         evHoje.forEach(e => {
             html += `
             <div style="padding:12px;border-left:6px solid var(--accent);
-                        border-radius:10px;background:var(--card);margin-bottom:10px">
+                        border-radius:10px;background:var(--bg-body);margin-bottom:10px">
                 <strong>${e.diaInteiro ? "Dia inteiro" : e.hora}</strong> — ${e.cliente}<br>
                 <small>${e.tipo || 'Evento'}</small>
             </div>
@@ -80,7 +80,7 @@ function renderHome() {
         agHoje.forEach(a => {
             html += `
                 <div style="padding:12px;border-left:5px solid var(--accent);
-                            margin:10px 0;border-radius:10px;background:var(--card)">
+                            margin:10px 0;border-radius:10px;background:var(--bg-body)">
                     <strong>${a.hora}</strong> — ${a.clienteNome || a.nome}<br>
                     <span class="status-pill st-${a.status}">${a.status}</span>
                 </div>
@@ -230,7 +230,7 @@ function showAgendaList() {
     let html = "";
     list.forEach(a => {
         html += `
-        <div style="border-left:6px solid var(--accent);padding:12px;border-radius:10px;margin-bottom:10px;background:var(--card)">
+        <div style="border-left:6px solid var(--accent);padding:12px;border-radius:10px;margin-bottom:10px;background:var(--bg-body)">
             <div style="display:flex;justify-content:space-between">
                 <div>
                     <strong>${a.hora}</strong> — ${a.clienteNome}<br>
@@ -290,7 +290,9 @@ function renderClientes() {
         <label>Telefone</label><input id="c_tel">
         <label>Instagram</label><input id="c_insta">
         <label>Observações</label><textarea id="c_obs"></textarea>
-        <button class="btn" onclick="saveCliente()">Salvar</button>
+        <div class="row">
+            <button class="btn" onclick="saveCliente()">Salvar</button>
+        </div>
     </div>
 
     <div class="card">
@@ -403,9 +405,9 @@ function renderPagamentos() {
 
     <div class='card'>
         <h3>📄 Lista de Pagamentos</h3>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
             <label style="margin:0">Filtrar:</label>
-            <select id="p_filter_status" onchange="showPagamentos()">
+            <select id="p_filter_status" onchange="showPagamentos()" style="width:auto">
                 <option value="todos">Todos</option>
                 <option value="pago">Pago</option>
                 <option value="parcial">Parcial</option>
@@ -596,7 +598,7 @@ function openPagamentoDetalhes(id) {
     }
 
     let html = `
-    <div class="card" style="border:2px solid var(--accent)">
+    <div class="card" style="border:2px solid var(--accent); margin-top:20px;">
         <h3>Detalhes — ${v.nome}</h3>
         <p><strong>Pacote:</strong> ${v.pacote} — <strong>Extras Pagos:</strong> ${v.extras || 0}</p>
         ${infoCortesia}
