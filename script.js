@@ -1,5 +1,5 @@
 /* ===========================================================
-   LOCAL STORAGE HELPERS
+   1. BANCO DE DADOS (LOCAL STORAGE)
 =========================================================== */
 function load(key) {
     try { return JSON.parse(localStorage.getItem(key) || '[]'); }
@@ -9,174 +9,208 @@ function save(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
 }
 
-/* Bancos de dados */
+// Carrega dados iniciais
 let AG = load("albany_agenda");
 let VD = load("albany_vendas");
 let CL = load("albany_clientes");
 let EV = load("albany_eventos");
 
+// Variáveis globais para os Gráficos
+let chartFaturamentoInstance = null;
+let chartTiposInstance = null;
+
 /* ===========================================================
-   NAVEGAÇÃO
+   2. NAVEGAÇÃO E TEMA
 =========================================================== */
 function nav(p) {
+    // Atualiza visual do menu
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.querySelector(`button[onclick*="'${p}'"]`);
+    if(btn) btn.classList.add('active');
+
+    // Renderiza a tela correta
     if (p === "home") renderHome();
     if (p === "agenda") renderAgenda();
     if (p === "clientes") renderClientes();
-    // Ajuste: aceita tanto 'vendas' quanto 'pagamentos' para evitar erro no menu
-    if (p === "vendas" || p === "pagamentos") renderPagamentos(); 
+    if (p === "vendas" || p === "pagamentos") renderPagamentos();
     if (p === "dashboard") renderDashboard();
     if (p === "eventos") renderEventos();
 }
 
-/* Alternar tema */
 function toggleTheme() {
     const t = document.body.getAttribute("data-theme");
     document.body.setAttribute("data-theme", t === "light" ? "dark" : "light");
 }
 
 /* ===========================================================
-   HOME — Mostra os agendamentos de hoje + NOTIFICAÇÃO + Eventos
+   3. FUNÇÕES AUXILIARES (WHATSAPP, FORMAT, DATA)
+=========================================================== */
+function formatMoeda(valor) {
+    return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function getClienteTel(nome) {
+    const cli = CL.find(c => c.nome.toLowerCase() === nome.toLowerCase());
+    return cli ? cli.tel : "";
+}
+
+function abrirWhatsapp(nome, data, hora, tipo = 'confirmacao') {
+    const tel = getClienteTel(nome);
+    if (!tel) return alert(`Telefone do cliente "${nome}" não encontrado no cadastro. Vá em Clientes e adicione.`);
+
+    const telClean = tel.replace(/\D/g, '');
+    let msg = "";
+    
+    if (tipo === 'confirmacao') {
+        msg = `Olá ${nome}, tudo bem? Aqui é do Studio Albany. Gostaria de confirmar seu agendamento para ${data.split('-').reverse().join('/')} às ${hora}. Podemos confirmar?`;
+    } else if (tipo === 'evento') {
+        msg = `Olá ${nome}, tudo bem? Passando para confirmar os detalhes do seu evento (${tipo}) no dia ${data.split('-').reverse().join('/')}.`;
+    } else if (tipo === 'cobranca') {
+        msg = `Olá ${nome}, referente ao seu pacote no Studio Albany, notamos um saldo pendente. Podemos agendar o pagamento?`;
+    }
+
+    const link = `https://wa.me/55${telClean}?text=${encodeURIComponent(msg)}`;
+    window.open(link, '_blank');
+}
+
+/* ===========================================================
+   4. HOME — Resumo do Dia + WhatsApp + Notificação
 =========================================================== */
 function renderHome() {
     const hoje = new Date().toISOString().slice(0, 10);
     const content = document.getElementById('content');
 
-    /* Agendamentos do dia */
-    const agHoje = AG.filter(a => a.data === hoje)
-                      .sort((a,b)=> (a.hora || "00:00").localeCompare(b.hora || "00:00"));
-
-    /* Eventos do dia */
-    const evHoje = EV.filter(e => e.data === hoje)
-                      .sort((a,b)=> (a.hora || "00:00").localeCompare(b.hora || "00:00"));
+    const agHoje = AG.filter(a => a.data === hoje).sort((a,b)=> (a.hora||"").localeCompare(b.hora||""));
+    const evHoje = EV.filter(e => e.data === hoje);
 
     let html = `
     <div class='card'>
         <h2>Bem-vinda, Albany!</h2>
-        <p>Resumo do dia (${hoje}):</p>
+        <p>Resumo do dia (${hoje.split('-').reverse().join('/')}):</p>
     `;
 
     /* EVENTOS DO DIA */
     if (evHoje.length) {
-        html += `<h3 style="margin-top:20px">🎪 Eventos de Hoje</h3>`;
+        html += `<h3 style="margin-top:20px; color:var(--primary)">🎪 Eventos de Hoje</h3>`;
         evHoje.forEach(e => {
             html += `
-            <div style="padding:12px;border-left:6px solid var(--accent);
-                        border-radius:10px;background:var(--bg-body);margin-bottom:10px">
-                <strong>${e.diaInteiro ? "Dia inteiro" : e.hora}</strong> — ${e.cliente}<br>
-                <small>${e.tipo || 'Evento'}</small>
-            </div>
-            `;
+            <div style="padding:15px; border-left:6px solid var(--accent); border-radius:8px; background:var(--bg-body); margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <strong>${e.diaInteiro ? "Dia inteiro" : e.hora}</strong> — ${e.cliente}<br>
+                    <small>${e.tipo || 'Evento'}</small>
+                </div>
+                <button class="btn-whatsapp" onclick="abrirWhatsapp('${e.cliente}', '${e.data}', '${e.hora}', 'evento')">
+                    <i class="ph ph-whatsapp-logo"></i> Confirmar
+                </button>
+            </div>`;
         });
-    } else {
-        html += `<p style="margin-top:20px"><em>Nenhum evento hoje.</em></p>`;
     }
 
     /* AGENDAMENTOS DO DIA */
-    html += `<h3 style="margin-top:20px">📷 Agendamentos de Hoje</h3>`;
+    html += `<h3 style="margin-top:20px; color:var(--text-main)">📷 Agendamentos de Hoje</h3>`;
 
     if (!agHoje.length) {
-        html += `<p>Nenhum agendamento hoje.</p></div>`;
+        html += `<p>Nenhum agendamento para hoje.</p></div>`;
     } else {
         agHoje.forEach(a => {
             html += `
-                <div style="padding:12px;border-left:5px solid var(--accent);
-                            margin:10px 0;border-radius:10px;background:var(--bg-body)">
-                    <strong>${a.hora}</strong> — ${a.clienteNome || a.nome}<br>
+            <div style="padding:15px; border-left:5px solid var(--accent); margin:10px 0; border-radius:8px; background:var(--bg-body); display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <strong>${a.hora}</strong> — ${a.clienteNome}<br>
                     <span class="status-pill st-${a.status}">${a.status}</span>
                 </div>
-            `;
+                <button class="btn-whatsapp" onclick="abrirWhatsapp('${a.clienteNome}', '${a.data}', '${a.hora}', 'confirmacao')">
+                    <i class="ph ph-whatsapp-logo"></i> Confirmar
+                </button>
+            </div>`;
         });
         html += `</div>`;
     }
 
     content.innerHTML = html;
-
-    /* NOTIFICAÇÃO (opcional) */
-    if (Notification.permission !== "denied") {
+    
+    // Notificação do navegador (Restaurada completamente)
+    if (Notification.permission !== "denied" && (agHoje.length || evHoje.length)) {
         Notification.requestPermission().then(p => {
-            if (p === "granted" && (agHoje.length || evHoje.length)) {
-                let corpo = "";
-                if (evHoje.length) {
-                    corpo += "Eventos:\n" + evHoje.map(e =>
-                        `${e.diaInteiro ? "Dia inteiro" : e.hora} — ${e.cliente} (${e.tipo || ''})`
-                    ).join("\n") + "\n\n";
-                }
-                if (agHoje.length) {
-                    corpo += "Agendamentos:\n" + agHoje.map(a =>
-                        `${a.hora} — ${a.clienteNome}`
-                    ).join("\n");
-                }
-                new Notification("Resumo do dia", { body: corpo });
+            if (p === "granted") {
+                const qtd = agHoje.length + evHoje.length;
+                new Notification("Studio Albany", {
+                    body: `Você tem ${qtd} compromissos hoje!`,
+                    icon: "https://cdn-icons-png.flaticon.com/512/747/747376.png" // Ícone genérico de calendário
+                });
             }
         });
     }
 }
 
 /* ===========================================================
-   AGENDA
+   5. AGENDA (Completa com Remarcar)
 =========================================================== */
+const HORARIOS = [];
+for (let h = 9; h <= 20; h++) HORARIOS.push(String(h).padStart(2, "0") + ":00");
+
 function renderAgenda() {
     const content = document.getElementById('content');
     content.innerHTML = `
     <div class='card'>
         <h3>📅 Novo Agendamento</h3>
-
         <label>Cliente</label>
         <select id="ag_cliente">
             <option value="">Selecione</option>
             ${CL.map(c => `<option value="${c.nome}">${c.nome}</option>`).join("")}
         </select>
-
-        <label>Data</label>
-        <input type="date" id="ag_data" onchange="carregarHorarios()">
-
-        <label>Horário</label>
-        <select id="ag_hora"></select>
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+            <div>
+                <label>Data</label>
+                <input type="date" id="ag_data" onchange="carregarHorarios()">
+            </div>
+            <div>
+                <label>Horário</label>
+                <select id="ag_hora"></select>
+            </div>
+        </div>
 
         <label>Status</label>
         <select id="ag_status">
             <option value="confirmado">Confirmado</option>
-            <option value="cancelado">Cancelado</option>
+            <option value="pendente">Pendente</option>
             <option value="remarcado">Remarcado</option>
         </select>
 
-        <div class="row">
+        <div style="margin-top:20px; display:flex; gap:10px;">
             <button class="btn" onclick="saveAgenda()">Salvar</button>
-            <button class="btn ghost" onclick="renderAgenda()">Limpar</button>
         </div>
     </div>
 
     <div class='card'>
-        <h3>📌 Agendamentos do Dia</h3>
-        <input id="ag_search" placeholder="Pesquisar cliente..." oninput="showAgendaList()" />
-        <input type="date" id="ag_filter" onchange="showAgendaList()">
-        <div id="ag_list" style="margin-top:15px">Selecione uma data</div>
+        <h3>📌 Consultar Agenda</h3>
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <input type="date" id="ag_filter" onchange="showAgendaList()">
+            <input type="text" id="ag_search" placeholder="Pesquisar cliente..." oninput="showAgendaList()">
+        </div>
+        <div id="ag_list">Selecione uma data acima.</div>
     </div>
     `;
-}
-
-/* Horários 09:00 → 20:00 */
-const HORARIOS = [];
-for (let h = 9; h <= 20; h++) {
-    HORARIOS.push(String(h).padStart(2, "0") + ":00");
 }
 
 function carregarHorarios() {
     const data = document.getElementById("ag_data").value;
     if (!data) return;
     const agendados = AG.filter(a => a.data === data).map(a => a.hora);
-    const eventosHora = EV.filter(e => e.data === data && !e.diaInteiro).map(e => e.hora);
-    const diaInteiroEvento = EV.some(e => e.data === data && e.diaInteiro);
+    const eventos = EV.filter(e => e.data === data);
+    
+    const diaBloqueado = eventos.some(e => e.diaInteiro);
+    const horasBloqueadas = eventos.map(e => e.hora);
 
     let html = `<option value="">Selecione</option>`;
     HORARIOS.forEach(h => {
-        if (diaInteiroEvento || agendados.includes(h) || eventosHora.includes(h)) {
-            html += `<option disabled>${h} — Ocupado</option>`;
-        } else {
-            html += `<option value="${h}">${h}</option>`;
-        }
+        let disabled = "";
+        let texto = h;
+        if (diaBloqueado) { disabled = "disabled"; texto += " (Evento Dia Todo)"; }
+        else if (agendados.includes(h) || horasBloqueadas.includes(h)) { disabled = "disabled"; texto += " (Ocupado)"; }
+        html += `<option value="${h}" ${disabled}>${texto}</option>`;
     });
-
     document.getElementById("ag_hora").innerHTML = html;
 }
 
@@ -186,100 +220,83 @@ function saveAgenda() {
     const hora = document.getElementById("ag_hora").value;
     const status = document.getElementById("ag_status").value;
 
-    if (!cliente || !data || !hora) {
-        alert("Preencha todos os campos.");
-        return;
-    }
+    if (!cliente || !data || !hora) return alert("Preencha todos os campos.");
 
-    if (EV.some(e => e.data === data && e.diaInteiro)) {
-        alert("⚠️ Este dia está bloqueado por um evento de dia inteiro.");
-        return;
-    }
-    if (EV.some(e => e.data === data && e.hora === hora)) {
-        alert("⚠️ Já existe um evento neste horário.");
-        return;
-    }
-
-    AG.push({
-        id: Date.now(),
-        clienteNome: cliente,
-        data, hora, status
-    });
-
+    // Validação extra de conflito
+    if (EV.some(e => e.data === data && e.diaInteiro)) return alert("Dia bloqueado por evento.");
+    
+    AG.push({ id: Date.now(), clienteNome: cliente, data, hora, status });
     save("albany_agenda", AG);
-    alert("Agendamento salvo!");
-    showAgendaList();
+    alert("Agendado com sucesso!");
+    renderAgenda();
 }
 
 function showAgendaList() {
     const d = document.getElementById("ag_filter").value;
-    if (!d) return;
-
     const termo = (document.getElementById("ag_search").value || "").toLowerCase();
-    const list = AG.filter(x =>
-        x.data === d &&
-        x.clienteNome.toLowerCase().includes(termo)
-    ).sort((a,b)=> (a.hora || "00:00").localeCompare(b.hora || "00:00"));
-
-    const agList = document.getElementById("ag_list");
-    if (!list.length) {
-        agList.innerHTML = "<p>Nenhum agendamento.</p>";
-        return;
+    
+    // Se não tiver data selecionada, tenta mostrar algo ou pede data
+    if (!d && !termo) { 
+        document.getElementById("ag_list").innerHTML = "<p>Selecione uma data ou pesquise por nome.</p>";
+        return; 
     }
+
+    let list = AG;
+    if(d) list = list.filter(x => x.data === d);
+    if(termo) list = list.filter(x => x.clienteNome.toLowerCase().includes(termo));
+    
+    list.sort((a,b)=> (a.hora||"").localeCompare(b.hora||""));
+
+    const div = document.getElementById("ag_list");
+    if (!list.length) { div.innerHTML = "<p>Nenhum agendamento encontrado.</p>"; return; }
 
     let html = "";
     list.forEach(a => {
         html += `
-        <div style="border-left:6px solid var(--accent);padding:12px;border-radius:10px;margin-bottom:10px;background:var(--bg-body)">
-            <div style="display:flex;justify-content:space-between">
-                <div>
-                    <strong>${a.hora}</strong> — ${a.clienteNome}<br>
-                    <span class="status-pill st-${a.status}">${a.status}</span>
-                </div>
-                <div style="display:flex;gap:6px">
-                    <button class="btn" onclick="remarcar(${a.id})">Remarcar</button>
-                    <button class="btn danger" onclick="delAgenda(${a.id})">Excluir</button>
-                </div>
+        <div style="border-bottom:1px solid var(--border); padding:10px 0; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <strong>${a.data ? a.data.split('-').reverse().join('/') : ''} - ${a.hora}</strong> - ${a.clienteNome} 
+                <span class="status-pill st-${a.status}">${a.status}</span>
+            </div>
+            <div style="display:flex; gap:5px;">
+                <button class="btn-whatsapp" title="Zap" onclick="abrirWhatsapp('${a.clienteNome}', '${a.data}', '${a.hora}')"><i class="ph ph-whatsapp-logo"></i></button>
+                <button class="btn" style="padding:5px 10px;" onclick="remarcar(${a.id})">Remarcar</button>
+                <button class="btn danger" style="padding:5px 10px;" onclick="delAgenda(${a.id})"><i class="ph ph-trash"></i></button>
             </div>
         </div>`;
     });
-
-    agList.innerHTML = html;
+    div.innerHTML = html;
 }
 
 function remarcar(id) {
     const ag = AG.find(x => x.id === id);
+    if(!ag) return;
+    
     const novaData = prompt("Nova data (YYYY-MM-DD):", ag.data);
     const novoHora = prompt("Novo horário (HH:MM):", ag.hora);
 
     if (!novaData || !novoHora) return;
 
-    if (EV.some(e => e.data === novaData && e.diaInteiro)) {
-        alert("⚠️ Não é possível remarcar: dia bloqueado.");
-        return;
-    }
-    if (EV.some(e => e.data === novaData && e.hora === novoHora)) {
-        alert("⚠️ Não é possível remarcar: horário ocupado.");
-        return;
-    }
-
+    // Simples validação
+    if (EV.some(e => e.data === novaData && e.diaInteiro)) return alert("Dia bloqueado!");
+    
     ag.data = novaData;
     ag.hora = novoHora;
     ag.status = "remarcado";
-
     save("albany_agenda", AG);
     showAgendaList();
 }
 
 function delAgenda(id) {
-    if (!confirm("Confirmar exclusão?")) return;
-    AG = AG.filter(x => x.id !== id);
-    save("albany_agenda", AG);
-    showAgendaList();
+    if(confirm("Excluir agendamento?")) {
+        AG = AG.filter(x => x.id !== id);
+        save("albany_agenda", AG);
+        showAgendaList();
+    }
 }
 
 /* ===========================================================
-   CLIENTES
+   6. CLIENTES
 =========================================================== */
 function renderClientes() {
     const content = document.getElementById('content');
@@ -287,234 +304,160 @@ function renderClientes() {
     <div class='card'>
         <h3>👤 Novo Cliente</h3>
         <label>Nome</label><input id="c_nome">
-        <label>Telefone</label><input id="c_tel">
+        <label>Telefone (WhatsApp)</label><input id="c_tel" placeholder="Ex: 11999999999">
         <label>Instagram</label><input id="c_insta">
-        <label>Observações</label><textarea id="c_obs"></textarea>
-        <div class="row">
-            <button class="btn" onclick="saveCliente()">Salvar</button>
-        </div>
+        <label>Obs</label><textarea id="c_obs"></textarea>
+        <button class="btn" style="margin-top:15px;" onclick="saveCliente()">Salvar Cliente</button>
     </div>
-
     <div class="card">
-        <h3>📄 Lista de Clientes</h3>
-        <input id="c_search" placeholder="Pesquisar..." oninput="showClientes()">
+        <h3>Lista de Clientes</h3>
+        <input id="c_search" placeholder="Pesquisar..." oninput="showClientes()" style="margin-bottom:10px;">
         <div id="c_list"></div>
     </div>`;
     showClientes();
 }
 
 function saveCliente() {
-    const nome = document.getElementById("c_nome").value.trim();
-    if (!nome) return alert("Informe o nome");
-
-    CL.push({
-        id: Date.now(),
-        nome: nome,
-        tel: document.getElementById("c_tel").value,
-        insta: document.getElementById("c_insta").value,
-        obs: document.getElementById("c_obs").value
-    });
-
+    const nome = document.getElementById("c_nome").value;
+    const tel = document.getElementById("c_tel").value;
+    if(!nome) return alert("Nome obrigatório");
+    
+    CL.push({ id: Date.now(), nome, tel, insta: document.getElementById("c_insta").value, obs: document.getElementById("c_obs").value });
     save("albany_clientes", CL);
     renderClientes();
 }
 
 function showClientes() {
-    const termo = (document.getElementById("c_search").value || "").toLowerCase();
+    const termo = (document.getElementById("c_search")?.value || "").toLowerCase();
     const lista = CL.filter(c => c.nome.toLowerCase().includes(termo));
-    const cList = document.getElementById("c_list");
+    const div = document.getElementById("c_list");
 
-    if (!lista.length) {
-        cList.innerHTML = "<p>Nenhum cliente cadastrado.</p>";
-        return;
-    }
-
-    let html = `<table><thead><tr><th>Nome</th><th>Telefone</th><th>Instagram</th><th>Ações</th></tr></thead><tbody>`;
+    if(!lista.length) { div.innerHTML = "<p>Nenhum cliente.</p>"; return; }
+    
+    let html = `<table><thead><tr><th>Nome</th><th>Tel</th><th>Ações</th></tr></thead><tbody>`;
     lista.forEach(c => {
+        const telClean = c.tel ? c.tel.replace(/\D/g, '') : '';
         html += `<tr>
             <td>${c.nome}</td>
             <td>${c.tel}</td>
-            <td>${c.insta}</td>
-            <td><button class="btn danger" onclick="delCliente(${c.id})">Excluir</button></td>
+            <td style="display:flex; gap:5px;">
+                ${telClean ? `<a href="https://wa.me/55${telClean}" target="_blank" class="btn-whatsapp" style="padding:5px 8px;"><i class="ph ph-whatsapp-logo"></i></a>` : ''}
+                <button class="btn danger" onclick="delCliente(${c.id})" style="padding:5px 8px;"><i class="ph ph-trash"></i></button>
+            </td>
         </tr>`;
     });
     html += "</tbody></table>";
-    cList.innerHTML = html;
+    div.innerHTML = html;
 }
 
 function delCliente(id) {
-    if (!confirm("Excluir cliente?")) return;
-    CL = CL.filter(x => x.id !== id);
-    save("albany_clientes", CL);
-    showClientes();
+    if(confirm("Excluir cliente?")) {
+        CL = CL.filter(c => c.id !== id);
+        save("albany_clientes", CL);
+        showClientes();
+    }
 }
 
 /* ===========================================================
-   PAGAMENTOS (CORRIGIDO E COM CORTESIA)
+   7. FINANCEIRO & VENDAS
 =========================================================== */
 function renderPagamentos() {
     const content = document.getElementById('content');
     content.innerHTML = `
     <div class='card'>
-        <h3>💳 Registrar Venda / Pagamento</h3>
-
+        <h3>💳 Nova Venda</h3>
         <label>Cliente</label>
         <select id="p_cliente">
             <option value="">Selecione</option>
             ${CL.map(c => `<option value="${c.nome}">${c.nome}</option>`).join("")}
         </select>
-
-        <label>Pacote</label>
-        <select id='p_pac' onchange="atualizarPrevisao()">
-            <option value='p1'>Pacote 1 - R$70 (Extra R$10)</option>
-            <option value='p2'>Pacote 2 - R$100 (Extra R$15)</option>
-            <option value='cortesia'>Cortesia</option>
-        </select>
-
-        <div class="row">
-            <div style="flex:1">
-                <label>Extras Pagos (Qtd)</label>
-                <input type="number" id="p_ext" value="0" min="0" onchange="atualizarPrevisao()">
-            </div>
-            <div style="flex:1">
-                <label>Cortesias (Qtd)</label>
-                <input type="number" id="p_cortesia" value="0" min="0" onchange="atualizarPrevisao()">
-            </div>
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <div><label>Pacote</label>
+            <select id='p_pac' onchange="calcPrev()"><option value='p1'>Pacote 1 (R$70)</option><option value='p2'>Pacote 2 (R$100)</option><option value='cortesia'>Cortesia</option></select></div>
+            <div><label>Extras Pagos (Qtd)</label><input type="number" id="p_ext" value="0" onchange="calcPrev()"></div>
         </div>
-        <p id="feedback_cortesia" style="font-size:13px;color:#d32f2f;margin:5px 0 0 0;display:none;font-weight:bold"></p>
 
-        <label>Valor total (R$)</label>
-        <input type="number" id="p_total" placeholder="Ex: 150" step="0.01">
+        <label style="color:var(--danger)">Qtd. Cortesias (Não cobrado)</label>
+        <input type="number" id="p_cortesia" value="0" onchange="calcPrev()">
+        <p id="p_feedback_cortesia" style="font-size:12px; color:var(--danger); font-weight:bold;"></p>
 
-        <label>Pagamento agora (R$)</label>
-        <input type="number" id="p_pago_agora" value="0" step="0.01">
+        <label>Total Final (R$)</label>
+        <input type="number" id="p_total">
+        
+        <label>Valor Pago Agora (Entrada)</label>
+        <input type="number" id="p_pago_agora" value="0">
+        
+        <label>Forma</label>
+        <select id="p_forma"><option value="pix">PIX</option><option value="dinheiro">Dinheiro</option><option value="credito">Crédito</option></select>
 
-        <label>Forma de Pagamento</label>
-        <select id="p_forma">
-            <option value="pix">PIX</option>
-            <option value="dinheiro">Dinheiro</option>
-            <option value="credito">Crédito</option>
-            <option value="debito">Débito</option>
-        </select>
-
-        <div class="row">
-            <button class="btn" onclick="savePagamentoVenda()">Salvar Venda</button>
-            <button class="btn ghost" onclick="renderPagamentos()">Limpar</button>
-        </div>
+        <button class="btn" style="margin-top:15px;" onclick="saveVenda()">Registrar Venda</button>
     </div>
 
     <div class='card'>
-        <h3>📄 Lista de Pagamentos</h3>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
-            <label style="margin:0">Filtrar:</label>
-            <select id="p_filter_status" onchange="showPagamentos()" style="width:auto">
-                <option value="todos">Todos</option>
-                <option value="pago">Pago</option>
-                <option value="parcial">Parcial</option>
-                <option value="pendente">Pendente</option>
-            </select>
-            <input id="p_search" placeholder="Pesquisar..." oninput="showPagamentos()" style="margin-left:10px;flex:1" />
-        </div>
-        <div style="margin-bottom:10px">
-            <button class="btn ghost" onclick="baixarPDF()" style="width:100%">📄 Exportar Relatório Geral (TXT)</button>
+        <h3>📄 Histórico de Vendas</h3>
+        <div style="display:flex; gap:10px; margin-bottom:10px;">
+             <button class="btn ghost" onclick="baixarPDF()">📄 Exportar Relatório</button>
+             <input placeholder="Buscar..." id="p_search" oninput="showPagamentos()">
         </div>
         <div id='p_list'></div>
     </div>
     <div id="p_details_container"></div>
     `;
-    
-    atualizarPrevisao(); // Preenche valor inicial
+    calcPrev();
     showPagamentos();
 }
 
-/* Calcular valor base */
 function calcTotal(p, e) {
-    e = Number(e) || 0; // Garante que é número
     if (p === "p1") return 70 + (e * 10);
     if (p === "p2") return 100 + (e * 15);
-    if (p === "cortesia") return 0;
     return 0;
 }
 
-/* Atualiza o campo de preço automaticamente e mostra perda de cortesia */
-function atualizarPrevisao() {
+function calcPrev() {
     const pac = document.getElementById('p_pac').value;
-    const ext = document.getElementById('p_ext').value; // Pagas
-    const cortesia = Number(document.getElementById('p_cortesia').value || 0);
-    const elTotal = document.getElementById('p_total');
-    const fbCortesia = document.getElementById('feedback_cortesia');
+    const ext = Number(document.getElementById('p_ext').value);
+    const cort = Number(document.getElementById('p_cortesia').value);
     
-    // Atualiza Total a Cobrar
-    const valor = calcTotal(pac, ext);
-    if (pac !== 'cortesia') {
-        elTotal.value = valor.toFixed(2);
-    } else {
-        elTotal.value = "0.00";
-    }
+    let custoUnit = pac === 'p2' ? 15 : 10;
+    const perda = cort * custoUnit;
 
-    // Calcula Perda com Cortesia
-    let precoExtra = 0;
-    if (pac === 'p1') precoExtra = 10;
-    if (pac === 'p2') precoExtra = 15;
-    
-    const valorPerdido = cortesia * precoExtra;
-    
-    if (valorPerdido > 0) {
-        fbCortesia.style.display = 'block';
-        fbCortesia.innerText = `⚠️ Valor em cortesias (não cobrado): R$ ${valorPerdido.toFixed(2)}`;
-    } else {
-        fbCortesia.style.display = 'none';
-    }
+    const total = calcTotal(pac, ext);
+    if(pac !== 'cortesia') document.getElementById('p_total').value = total;
+    else document.getElementById('p_total').value = 0;
+
+    const fb = document.getElementById('p_feedback_cortesia');
+    if(perda > 0) fb.innerText = `Você está deixando de ganhar R$ ${perda.toFixed(2)} em cortesias.`;
+    else fb.innerText = "";
 }
 
-function savePagamentoVenda() {
+function saveVenda() {
     const nome = document.getElementById('p_cliente').value;
     const pacote = document.getElementById('p_pac').value;
-    const extras = Number(document.getElementById('p_ext').value || 0); // Pagas
-    const cortesia = Number(document.getElementById('p_cortesia').value || 0); // Grátis
-    const totalInput = Number(document.getElementById('p_total').value || 0);
+    const total = Number(document.getElementById('p_total').value);
+    const cortesiaQtd = Number(document.getElementById('p_cortesia').value);
     const pagoAgora = Number(document.getElementById('p_pago_agora').value || 0);
     const forma = document.getElementById('p_forma').value;
-
-    if (!nome) return alert("Informe o cliente.");
     
-    const totalFinal = totalInput > 0 ? totalInput : calcTotal(pacote, extras);
+    let custoUnit = pacote === 'p2' ? 15 : 10;
+    const valorCortesia = cortesiaQtd * custoUnit;
 
-    // Validação
-    if (totalFinal <= 0 && pacote !== "cortesia") {
-        return alert("Informe o valor total do serviço.");
-    }
+    if(!nome) return alert("Selecione o cliente");
 
-    // Calcula valor estimado da cortesia
-    let precoExtra = 0;
-    if (pacote === 'p1') precoExtra = 10;
-    if (pacote === 'p2') precoExtra = 15;
-    const valorCortesia = cortesia * precoExtra;
-
-    const venda = {
+    const novaVenda = {
         id: Date.now(),
-        nome,
-        pacote,
-        extras,
-        cortesia,
-        valorCortesia,
-        total: Number(totalFinal.toFixed(2)),
+        nome, pacote, total, valorCortesia, cortesiaQtd,
         pagamentos: [],
         createdAt: new Date().toISOString()
     };
 
     if (pagoAgora > 0) {
-        venda.pagamentos.push({
-            valor: Number(pagoAgora.toFixed(2)),
-            forma,
-            data: new Date().toISOString()
-        });
+        novaVenda.pagamentos.push({ valor: pagoAgora, forma, data: new Date().toISOString() });
     }
 
-    VD.push(venda);
+    VD.push(novaVenda);
     save("albany_vendas", VD);
-
-    alert("Venda registrada com sucesso!");
+    alert("Venda registrada!");
     renderPagamentos();
 }
 
@@ -523,58 +466,37 @@ function totalPago(v) {
     return v.pagamentos.reduce((s,x) => s + Number(x.valor || 0), 0);
 }
 
-function statusVenda(v) {
-    const pago = totalPago(v);
-    if (pago >= (v.total - 0.01)) return "pago"; // Margem pequena pra erro de arredondamento
-    if (pago > 0) return "parcial";
-    return "pendente";
-}
-
 function showPagamentos() {
-    const termo = (document.getElementById("p_search").value || "").toLowerCase();
-    const filtro = (document.getElementById("p_filter_status").value || "todos");
-
+    const termo = (document.getElementById("p_search")?.value || "").toLowerCase();
     let lista = VD.slice().reverse();
 
-    if (filtro !== "todos") {
-        lista = lista.filter(v => statusVenda(v) === filtro);
-    }
-
-    if (termo) {
-        lista = lista.filter(v => v.nome.toLowerCase().includes(termo) || (v.pacote || "").toLowerCase().includes(termo));
-    }
+    if (termo) lista = lista.filter(v => v.nome.toLowerCase().includes(termo));
 
     const pList = document.getElementById("p_list");
-    if (!lista.length) {
-        pList.innerHTML = "<p>Nenhuma venda encontrada.</p>";
-        return;
-    }
+    if (!lista.length) { pList.innerHTML = "<p>Nenhuma venda.</p>"; return; }
 
-    let html = `<table><thead><tr>
-        <th>Data</th><th>Cliente</th><th>Total</th><th>Pago</th><th>Status</th><th>Ações</th>
-    </tr></thead><tbody>`;
+    let html = `<table><thead><tr><th>Data</th><th>Cliente</th><th>Total</th><th>Pago</th><th>Status</th><th>Ações</th></tr></thead><tbody>`;
 
     lista.forEach(v => {
         const pago = totalPago(v);
-        const stat = statusVenda(v);
-        
-        // Ajuste de classes CSS
-        let stClass = "st-cancelado"; // vermelho
+        // Status Lógica
+        let stClass = "st-cancelado"; 
         let stLabel = "Pendente";
-        if(stat === 'pago') { stClass = "st-confirmado"; stLabel = "Pago"; }
-        if(stat === 'parcial') { stClass = "st-remarcado"; stLabel = "Parcial"; }
+        if(pago >= v.total - 0.1) { stClass = "st-confirmado"; stLabel = "Pago"; }
+        else if(pago > 0) { stClass = "st-parcial"; stLabel = "Parcial"; }
 
         html += `
         <tr>
             <td>${new Date(v.createdAt).toLocaleDateString()}</td>
             <td>${v.nome}<br><small>${v.pacote}</small></td>
-            <td>R$ ${v.total.toFixed(2)}</td>
-            <td>R$ ${pago.toFixed(2)}</td>
+            <td>${formatMoeda(v.total)}</td>
+            <td>${formatMoeda(pago)}</td>
             <td><span class="status-pill ${stClass}">${stLabel}</span></td>
-            <td style="display:flex;gap:6px">
-                <button class="btn" onclick="openPagamentoDetalhes(${v.id})">Detalhes</button>
-                <button class="btn ghost" onclick="baixarVendaPDF(${v.id})">PDF</button>
-                <button class="btn danger" onclick="delVenda(${v.id})">X</button>
+            <td style="display:flex; gap:5px">
+                <button class="btn" style="padding:5px 8px" onclick="openPagamentoDetalhes(${v.id})">Detalhes</button>
+                <button class="btn ghost" style="padding:5px 8px" title="Comprovante Individual" onclick="baixarVendaPDF(${v.id})">📄</button>
+                <button class="btn-whatsapp" style="padding:5px 8px" onclick="abrirWhatsapp('${v.nome}', '', '', 'cobranca')"><i class="ph ph-whatsapp-logo"></i></button>
+                <button class="btn danger" style="padding:5px 8px" onclick="delVenda(${v.id})">X</button>
             </td>
         </tr>`;
     });
@@ -585,57 +507,43 @@ function showPagamentos() {
 
 function openPagamentoDetalhes(id) {
     const v = VD.find(x => x.id === id);
-    if (!v) return alert("Registro não encontrado.");
+    if (!v) return;
 
     const pago = totalPago(v);
     const falta = Math.max(0, v.total - pago);
     const container = document.getElementById("p_details_container");
 
-    // Lógica visual da cortesia nos detalhes
-    let infoCortesia = "";
-    if (v.cortesia > 0) {
-        infoCortesia = `<p style="color:#d32f2f"><strong>Cortesias:</strong> ${v.cortesia} fotos (Deixou de ganhar: R$ ${Number(v.valorCortesia||0).toFixed(2)})</p>`;
-    }
-
     let html = `
-    <div class="card" style="border:2px solid var(--accent); margin-top:20px;">
+    <div class="card" style="border:2px solid var(--accent); margin-top:20px; animation: fadeIn 0.3s;">
         <h3>Detalhes — ${v.nome}</h3>
-        <p><strong>Pacote:</strong> ${v.pacote} — <strong>Extras Pagos:</strong> ${v.extras || 0}</p>
-        ${infoCortesia}
-        <p><strong>Total a Receber:</strong> R$ ${v.total.toFixed(2)}</p>
-        <p><strong>Pago:</strong> R$ ${pago.toFixed(2)} — <strong style="color:${falta>0?'red':'green'}">Falta: R$ ${falta.toFixed(2)}</strong></p>
+        <p><strong>Pacote:</strong> ${v.pacote}</p>
+        <p style="color:var(--danger)"><strong>Cortesias dadas:</strong> ${v.cortesiaQtd || 0} (R$ ${(v.valorCortesia||0).toFixed(2)})</p>
+        <p><strong>Total:</strong> ${formatMoeda(v.total)} | <strong>Pago:</strong> ${formatMoeda(pago)} | <strong style="color:${falta>0?'red':'green'}">Falta: ${formatMoeda(falta)}</strong></p>
 
-        <h4>Histórico de pagamentos</h4>
+        <h4>Histórico</h4>
     `;
 
-    if (!v.pagamentos || !v.pagamentos.length) {
-        html += "<p>Nenhum pagamento registrado.</p>";
-    } else {
-        html += `<table><thead><tr><th>Data</th><th>Valor</th><th>Forma</th></tr></thead><tbody>`;
-        v.pagamentos.slice().reverse().forEach(p => {
-            html += `<tr><td>${new Date(p.data).toLocaleString()}</td><td>R$ ${Number(p.valor).toFixed(2)}</td><td>${p.forma}</td></tr>`;
+    if (!v.pagamentos || !v.pagamentos.length) html += "<p>Nada pago ainda.</p>";
+    else {
+        html += `<ul>`;
+        v.pagamentos.forEach(p => {
+            html += `<li>${new Date(p.data).toLocaleDateString()} - ${formatMoeda(p.valor)} (${p.forma})</li>`;
         });
-        html += `</tbody></table>`;
+        html += `</ul>`;
     }
 
-    html += `
-        <h4>Adicionar pagamento</h4>
-        <label>Valor</label>
-        <input id="p_add_valor_${id}" type="number" placeholder="Ex: 50" step="0.01">
-        <label>Forma</label>
-        <select id="p_add_forma_${id}">
-            <option value="pix">PIX</option>
-            <option value="dinheiro">Dinheiro</option>
-            <option value="credito">Crédito</option>
-            <option value="debito">Débito</option>
-        </select>
-
-        <div class="row" style="margin-top:10px">
-            <button class="btn" onclick="addPagamento(${id})">Adicionar Pagamento</button>
-            <button class="btn ghost" onclick="document.getElementById('p_details_container').innerHTML=''">Fechar</button>
+    if (falta > 0) {
+        html += `
+        <h4 style="margin-top:10px">Adicionar Parcela</h4>
+        <div style="display:flex; gap:10px; align-items:flex-end;">
+            <div><label>Valor</label><input type="number" id="p_add_valor_${id}" value="${falta.toFixed(2)}"></div>
+            <div><label>Forma</label><select id="p_add_forma_${id}"><option>Pix</option><option>Dinheiro</option></select></div>
+            <button class="btn" onclick="addPagamento(${id})">Lançar</button>
         </div>
-    </div>
-    `;
+        `;
+    }
+
+    html += `<button class="btn ghost" style="margin-top:15px; width:100%" onclick="document.getElementById('p_details_container').innerHTML=''">Fechar Detalhes</button></div>`;
 
     container.innerHTML = html;
     container.scrollIntoView({ behavior: 'smooth' });
@@ -643,87 +551,171 @@ function openPagamentoDetalhes(id) {
 
 function addPagamento(id) {
     const v = VD.find(x => x.id === id);
-    if (!v) return alert("Erro.");
+    const valor = Number(document.getElementById(`p_add_valor_${id}`).value);
+    const forma = document.getElementById(`p_add_forma_${id}`).value;
 
-    const inputId = document.getElementById(`p_add_valor_${id}`);
-    const inputForma = document.getElementById(`p_add_forma_${id}`);
+    if (valor <= 0) return alert("Valor inválido");
 
-    const valor = Number(inputId.value || 0);
-    const forma = inputForma.value || "pix";
-
-    if (!valor || valor <= 0) return alert("Informe um valor válido.");
-
-    v.pagamentos.push({
-        valor: Number(valor.toFixed(2)),
-        forma,
-        data: new Date().toISOString()
-    });
-
+    if(!v.pagamentos) v.pagamentos = [];
+    v.pagamentos.push({ valor, forma, data: new Date().toISOString() });
+    
     save("albany_vendas", VD);
-    alert("Pagamento registrado.");
-
-    openPagamentoDetalhes(id);
-    showPagamentos();
+    alert("Pagamento adicionado!");
+    openPagamentoDetalhes(id); // Recarrega detalhes
+    showPagamentos(); // Recarrega lista
 }
 
 function delVenda(id) {
-    if (!confirm("Excluir venda?")) return;
-    VD = VD.filter(v => v.id !== id);
-    save("albany_vendas", VD);
-    document.getElementById("p_details_container").innerHTML = "";
-    showPagamentos();
+    if(confirm("Tem certeza que quer apagar essa venda?")) {
+        VD = VD.filter(v => v.id !== id);
+        save("albany_vendas", VD);
+        showPagamentos();
+        document.getElementById("p_details_container").innerHTML = "";
+    }
 }
 
+function baixarPDF() {
+    if (!VD.length) return alert("Nenhuma venda para exportar.");
+    let doc = "RELATÓRIO DE VENDAS - STUDIO ALBANY\n=================================\n\n";
+    VD.forEach(v => {
+        const pago = totalPago(v);
+        doc += `CLIENTE: ${v.nome}\nPACOTE: ${v.pacote}\nTOTAL: ${formatMoeda(v.total)}\nPAGO: ${formatMoeda(pago)}\nSTATUS: ${pago >= v.total ? 'PAGO' : 'PENDENTE'}\n\n`;
+    });
+    
+    const blob = new Blob([doc], { type: "text/plain" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "relatorio_financeiro.txt";
+    a.click();
+}
+
+// FUNÇÃO RESTAURADA: Comprovante Individual
 function baixarVendaPDF(id) {
     const v = VD.find(x => x.id === id);
     if (!v) return;
     const pago = totalPago(v);
     const falta = Math.max(0, v.total - pago);
 
-    let doc = `Venda: ${v.nome}\nPacote: ${v.pacote}\nTotal: R$ ${v.total.toFixed(2)}\n`;
-    if (v.cortesia > 0) doc += `Cortesias: ${v.cortesia} fotos (R$ ${Number(v.valorCortesia).toFixed(2)})\n`;
-    doc += `\nPagamentos:\n`;
-
-    if (!v.pagamentos.length) doc += "Nenhum.\n";
-    else {
-        v.pagamentos.forEach(p => {
-            doc += `${new Date(p.data).toLocaleDateString()} - R$ ${Number(p.valor).toFixed(2)} (${p.forma})\n`;
-        });
-    }
-    doc += `\nTotal Pago: R$ ${pago.toFixed(2)}\nFalta: R$ ${falta.toFixed(2)}`;
-
-    const blob = new Blob([doc], { type: "text/plain" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `comprovante_${v.id}.txt`;
-    a.click();
-}
-
-/* (Função Restaurada) Exportar todas vendas */
-function baixarPDF() {
-    if (!VD.length) return alert("Nenhuma venda para exportar.");
-
-    let doc = "Relatório de Vendas / Pagamentos\n\n";
-    VD.forEach(v => {
-        const pago = totalPago(v);
-        const falta = Math.max(0, v.total - pago);
-        doc += `Cliente: ${v.nome}\nPacote: ${v.pacote}\nTotal: R$ ${v.total.toFixed(2)}\nPago: R$ ${pago.toFixed(2)}\nFalta: R$ ${falta.toFixed(2)}\nPagamentos:\n`;
-        if (!v.pagamentos.length) doc += "  - nenhum\n";
-        else v.pagamentos.forEach(p => {
-            doc += `  - ${new Date(p.data).toLocaleString()} — R$ ${Number(p.valor).toFixed(2)} — ${p.forma}\n`;
-        });
-        doc += "\n-----------------\n\n";
+    let doc = `COMPROVANTE STUDIO ALBANY\n=========================\n`;
+    doc += `Data: ${new Date().toLocaleDateString()}\n`;
+    doc += `Cliente: ${v.nome}\n`;
+    doc += `Pacote: ${v.pacote}\n`;
+    doc += `\nVALORES:\n`;
+    doc += `Total Contratado: ${formatMoeda(v.total)}\n`;
+    doc += `Total Pago: ${formatMoeda(pago)}\n`;
+    doc += `Restante: ${formatMoeda(falta)}\n`;
+    
+    doc += `\nHISTÓRICO DE PAGAMENTOS:\n`;
+    if(!v.pagamentos || !v.pagamentos.length) doc += " - Nenhum pagamento.\n";
+    else v.pagamentos.forEach(p => {
+        doc += ` - ${new Date(p.data).toLocaleDateString()}: ${formatMoeda(p.valor)} (${p.forma})\n`;
     });
-
+    
     const blob = new Blob([doc], { type: "text/plain" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "pagamentos_relatorio.txt";
+    a.download = `recibo_${v.nome.replace(/ /g,'_')}.txt`;
     a.click();
 }
 
 /* ===========================================================
-   EVENTOS
+   8. DASHBOARD COM GRÁFICOS
+=========================================================== */
+function renderDashboard() {
+    const content = document.getElementById('content');
+    
+    // 1. Cálculos de KPIs
+    const totalFaturado = VD.reduce((acc, v) => acc + Number(v.total), 0);
+    const totalVendas = VD.length;
+    const totalCortesiasPerdidas = VD.reduce((acc, v) => acc + Number(v.valorCortesia || 0), 0);
+
+    // 2. HTML Estrutural
+    content.innerHTML = `
+    <div class="dashboard-grid">
+        <div class="kpi-card">
+            <span class="kpi-title">Faturamento Total</span>
+            <span class="kpi-value">${formatMoeda(totalFaturado)}</span>
+            <span class="kpi-sub" style="color:var(--success)">Receita acumulada</span>
+        </div>
+        <div class="kpi-card">
+            <span class="kpi-title">Vendas Realizadas</span>
+            <span class="kpi-value">${totalVendas}</span>
+            <span class="kpi-sub" style="color:var(--text-muted)">Contratos</span>
+        </div>
+        <div class="kpi-card" style="border-color: var(--danger);">
+            <span class="kpi-title" style="color:var(--danger)">Potencial em Cortesias</span>
+            <span class="kpi-value" style="color:var(--danger)">${formatMoeda(totalCortesiasPerdidas)}</span>
+            <span class="kpi-sub">Valor que deixou de ganhar</span>
+        </div>
+    </div>
+
+    <div class="charts-row">
+        <div class="card">
+            <h3>📈 Faturamento vs Cortesias (Últimos Meses)</h3>
+            <div class="chart-box"><canvas id="chartFaturamento"></canvas></div>
+        </div>
+        <div class="card">
+            <h3>🍰 Tipos de Eventos</h3>
+            <div class="chart-box"><canvas id="chartTipos"></canvas></div>
+        </div>
+    </div>
+    `;
+
+    setTimeout(gerarGraficos, 100);
+}
+
+function gerarGraficos() {
+    // --- GRÁFICO 1 ---
+    const dadosMes = {}; 
+    VD.forEach(v => {
+        const mes = v.createdAt.slice(0, 7); 
+        if (!dadosMes[mes]) dadosMes[mes] = { faturamento: 0, cortesia: 0 };
+        dadosMes[mes].faturamento += Number(v.total);
+        dadosMes[mes].cortesia += Number(v.valorCortesia || 0);
+    });
+
+    const labelsMes = Object.keys(dadosMes).sort();
+    const dataFat = labelsMes.map(m => dadosMes[m].faturamento);
+    const dataCort = labelsMes.map(m => dadosMes[m].cortesia);
+
+    if(chartFaturamentoInstance) chartFaturamentoInstance.destroy();
+    const ctx1 = document.getElementById('chartFaturamento').getContext('2d');
+    chartFaturamentoInstance = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+            labels: labelsMes,
+            datasets: [
+                { label: 'Faturamento (R$)', data: dataFat, backgroundColor: '#b7924b' },
+                { label: 'Perda Cortesia (R$)', data: dataCort, backgroundColor: '#c62828' }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // --- GRÁFICO 2 ---
+    const dadosTipos = {};
+    EV.forEach(e => {
+        const t = e.tipo || "Outros";
+        dadosTipos[t] = (dadosTipos[t] || 0) + 1;
+    });
+
+    if(chartTiposInstance) chartTiposInstance.destroy();
+    const ctx2 = document.getElementById('chartTipos').getContext('2d');
+    chartTiposInstance = new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(dadosTipos),
+            datasets: [{
+                data: Object.values(dadosTipos),
+                backgroundColor: ['#b7924b', '#ef6c00', '#2e7d32', '#1f2937', '#6b7280']
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+}
+
+/* ===========================================================
+   9. EVENTOS (Restaurado Toggle Horário)
 =========================================================== */
 function renderEventos() {
     const content = document.getElementById('content');
@@ -731,147 +723,85 @@ function renderEventos() {
     <div class='card'>
         <h3>🎪 Novo Evento</h3>
         <label>Cliente</label>
-        <select id="ev_cliente">
-            <option value="">Selecione</option>
-            ${CL.map(c => `<option value="${c.nome}">${c.nome}</option>`).join("")}
-        </select>
-        
-        <label>Tipo de Evento</label>
+        <select id="ev_cliente">${CL.map(c => `<option value="${c.nome}">${c.nome}</option>`).join("")}</select>
+        <label>Tipo</label>
         <select id="ev_tipo">
-            <option value="">Selecione</option>
-            <option value="Pre Wedding">Pre Wedding</option>
-            <option value="Casamento">Casamento</option>
-            <option value="Batizado">Batizado</option>
-            <option value="Chá revelação">Chá revelação</option>
-            <option value="Inauguração de Loja">Inauguração de Loja</option>
-            <option value="Festa Infantil">Festa Infantil</option>
-            <option value="Festa de Adulto">Festa de Adulto</option>
-            <option value="Formatura">Formatura</option>
-            <option value="Ensaio Externo Formatura Infantil">Ensaio Externo Formatura Infantil</option>
-            <option value="Ensaio Externo Formatura Adulto">Ensaio Externo Formatura Adulto</option>
-            <option value="Ensaio Externo">Ensaio Externo</option>
-            <option value="Outros">Outros</option>
+            <option>Casamento</option><option>Aniversário</option><option>Formatura</option><option>Batizado</option>
+            <option>Outros</option>
         </select>
-
-        <label>Dia inteiro?</label>
+        <label>Data</label><input type="date" id="ev_data">
+        
+        <label>Dia Inteiro?</label>
         <select id="ev_diaInteiro" onchange="toggleEventoHorario()">
             <option value="nao">Não</option>
             <option value="sim">Sim</option>
         </select>
-        <label>Data</label>
-        <input type="date" id="ev_data" onchange="carregarHorariosEvento()">
-        <label id="lbl_ev_hora">Horário</label>
-        <select id="ev_hora"></select>
-        <div class="row">
-            <button class="btn" onclick="saveEvento()">Salvar</button>
-            <button class="btn ghost" onclick="renderEventos()">Limpar</button>
+        
+        <div id="div_ev_hora">
+            <label>Hora</label><input type="time" id="ev_hora">
         </div>
+        
+        <button class="btn" style="margin-top:15px" onclick="saveEvento()">Salvar Evento</button>
     </div>
     <div class="card">
-        <h3>📄 Lista de Eventos</h3>
-        <input type="date" id="ev_filter" onchange="showEventos()">
-        <div id="ev_list" style="margin-top:15px">Selecione uma data</div>
-    </div>
-    `;
-    setTimeout(() => { try { toggleEventoHorario(); } catch (err) {} }, 0);
+        <h3>Lista de Eventos</h3>
+        <div id="ev_list"></div>
+    </div>`;
+    showEventosList();
 }
 
 function toggleEventoHorario() {
-    const el = document.getElementById("ev_diaInteiro");
-    if (!el) return;
-    const diaInteiro = el.value === "sim";
-    const label = document.getElementById("lbl_ev_hora");
-    const select = document.getElementById("ev_hora");
-    
-    if (diaInteiro) {
-        select.style.display = "none";
-        label.style.display = "none";
-    } else {
-        select.style.display = "block";
-        label.style.display = "block";
-    }
-}
-
-function carregarHorariosEvento() {
-    const data = document.getElementById("ev_data").value;
-    if (!data) return;
-    let html = `<option value="">Selecione</option>`;
-    HORARIOS.forEach(h => html += `<option value="${h}">${h}</option>`);
-    document.getElementById("ev_hora").innerHTML = html;
+    const diaInteiro = document.getElementById("ev_diaInteiro").value === "sim";
+    document.getElementById("div_ev_hora").style.display = diaInteiro ? "none" : "block";
 }
 
 function saveEvento() {
-    const cliente = document.getElementById("ev_cliente").value;
+    const cli = document.getElementById("ev_cliente").value;
     const tipo = document.getElementById("ev_tipo").value;
     const data = document.getElementById("ev_data").value;
-    const hora = document.getElementById("ev_hora").value;
     const diaInteiro = document.getElementById("ev_diaInteiro").value === "sim";
+    const hora = diaInteiro ? null : document.getElementById("ev_hora").value;
 
-    if (!cliente || !data || !tipo) return alert("Preencha todos os campos obrigatórios.");
-    
-    EV.push({
-        id: Date.now(),
-        cliente, 
-        tipo, 
-        data, 
-        hora: diaInteiro ? null : hora, 
-        diaInteiro
-    });
+    if(!cli || !data) return alert("Preencha os dados");
+
+    EV.push({ id: Date.now(), cliente: cli, tipo, data, hora, diaInteiro });
     save("albany_eventos", EV);
-    alert("Evento salvo!");
-    showEventos();
+    renderEventos();
 }
 
-function showEventos() {
-    const d = document.getElementById("ev_filter").value;
-    if (!d) return;
-    const lista = EV.filter(e => e.data === d);
+function showEventosList() {
     const div = document.getElementById("ev_list");
-    
-    if (!lista.length) {
-        div.innerHTML = "<p>Nenhum evento.</p>";
-        return;
-    }
     let html = "";
-    lista.forEach(e => {
-        html += `<div style="padding:10px;border-bottom:1px solid #ddd;display:flex;justify-content:space-between">
+    EV.forEach(e => {
+        html += `
+        <div style="border-bottom:1px solid var(--border); padding:10px; display:flex; justify-content:space-between; align-items:center;">
             <div>
-                <strong>${e.diaInteiro ? "Dia Todo" : e.hora}</strong> — ${e.cliente}<br>
-                <small>${e.tipo || 'Evento'}</small>
+                <strong>${e.data.split('-').reverse().join('/')}</strong> - ${e.tipo} (${e.cliente})
+                <br><small>${e.diaInteiro ? "Dia Todo" : "Às " + e.hora}</small>
             </div>
-            <button class="btn danger" onclick="delEvento(${e.id})">Excluir</button>
+            <div style="display:flex; gap:5px">
+                <button class="btn-whatsapp" onclick="abrirWhatsapp('${e.cliente}', '${e.data}', '${e.hora}', 'evento')">
+                    <i class="ph ph-whatsapp-logo"></i>
+                </button>
+                <button class="btn danger" onclick="delEvento(${e.id})"><i class="ph ph-trash"></i></button>
+            </div>
         </div>`;
     });
-    div.innerHTML = html;
+    div.innerHTML = html || "<p>Nenhum evento.</p>";
 }
 
 function delEvento(id) {
-    if(!confirm("Excluir?")) return;
-    EV = EV.filter(e => e.id !== id);
-    save("albany_eventos", EV);
-    showEventos();
+    if(confirm("Excluir?")) {
+        EV = EV.filter(e => e.id !== id);
+        save("albany_eventos", EV);
+        renderEventos();
+    }
 }
 
-/* ===========================================================
-   DASHBOARD
-=========================================================== */
-function renderDashboard() {
-    const total = VD.reduce((s, x) => s + Number(x.total), 0);
-    const content = document.getElementById('content');
-    content.innerHTML = `
-    <div class="card">
-        <h3>📊 Dashboard</h3>
-        <p><strong>Total faturado:</strong> R$ ${total.toFixed(2)}</p>
-        <p><strong>Vendas registradas:</strong> ${VD.length}</p>
-    </div>`;
-}
-
-/* INÍCIO */
-renderHome();
-
-/* ===========================================================
-   SERVICE WORKER (Restaurado)
-=========================================================== */
+// RESTAURADO: Service Worker (para funcionar melhor em celulares)
 if ("serviceWorker" in navigator) {
     try { navigator.serviceWorker.register("sw.js"); } catch (err) {}
 }
+
+// INICIA NA HOME
+renderHome();
