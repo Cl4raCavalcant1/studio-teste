@@ -655,7 +655,7 @@ function renderDashboard() {
             <div class="chart-box"><canvas id="chartFaturamento"></canvas></div>
         </div>
         <div class="card">
-            <h3>🍰 Tipos de Eventos</h3>
+            <h3> Tipos de Eventos</h3>
             <div class="chart-box"><canvas id="chartTipos"></canvas></div>
         </div>
     </div>

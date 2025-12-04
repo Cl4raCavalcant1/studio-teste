@@ -92,10 +92,22 @@
         /* =========================================
            4. COMPONENTES VISUAIS
            ========================================= */
+        
+        /* --- BRAND (LOGO) --- */
         .brand {
-            display: flex; align-items: center; gap: 12px;
-            font-size: 20px; font-weight: 700; color: var(--primary);
-            margin-bottom: 40px; text-transform: uppercase; letter-spacing: 0.5px;
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; /* Garante espaço entre logo e botão mobile */
+            gap: 12px;
+            margin-bottom: 40px; 
+        }
+
+        /* Estilo da Imagem da Logo */
+        .brand-logo {
+            max-width: 180px; /* Largura máxima para não estourar a sidebar */
+            height: auto;     /* Mantém a proporção */
+            object-fit: contain;
+            display: block;
         }
 
         .nav-menu { display: flex; flex-direction: column; gap: 8px; flex: 1; }
@@ -217,7 +229,9 @@
         <!-- SIDEBAR -->
         <aside class="sidebar">
             <div class="brand">
-                <i class="ph ph-camera-rotate"></i> Studio Albany
+                <!-- AQUI: Substitua o link do placeholder pelo caminho da sua imagem (ex: 'logo.png') -->
+                <img src="logo.png.png" alt="Studio Albany Logo" class="brand-logo">
+                
                 <button id="mobile-toggle" onclick="document.getElementById('navMenu').classList.toggle('mobile-open')">
                     <i class="ph ph-list"></i>
                 </button>
