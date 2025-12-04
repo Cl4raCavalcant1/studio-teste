@@ -3,43 +3,41 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Studio Albany — Sistema Profissional</title>
+    <title>Studio Albany — Novo Layout</title>
 
-    <!-- Fonte Inter (Google Fonts) -->
+    <!-- Fonte Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Ícones (Phosphor Icons) -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Biblioteca de Gráficos (Chart.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         /* =========================================
            1. VARIÁVEIS & TEMA
            ========================================= */
         :root {
-            /* Cores Principais */
             --primary: #b7924b;
             --primary-hover: #8c6d32;
             --primary-light: rgba(183, 146, 75, 0.15);
             
-            /* Fundo e Texto (Light Mode) */
             --bg-body: #f4f4f6;
             --bg-card: #ffffff;
             --text-main: #1f2937;
             --text-muted: #6b7280;
             --border: #e5e7eb;
             
-            /* Status (Cores usadas nas pills) */
             --success: #2e7d32;
+            --whatsapp: #25D366; /* Cor Oficial WhatsApp */
+            --whatsapp-hover: #128C7E;
             --warning: #ef6c00;
             --danger: #c62828;
             
-            /* Compatibilidade com seu Script JS */
             --accent: #b7924b;
-            --card: #ffffff; /* Usado no style inline do JS */
-            
-            /* UI */
             --radius: 12px;
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         }
@@ -51,10 +49,7 @@
             --text-muted: #9ca3af;
             --border: #374151;
             --primary-light: rgba(183, 146, 75, 0.25);
-            
-            /* Compatibilidade Dark Mode JS */
             --accent: #c7a96a;
-            --card: #1f2937; 
         }
 
         /* =========================================
@@ -67,21 +62,18 @@
             color: var(--text-main);
             transition: background-color 0.3s, color 0.3s;
             height: 100vh;
-            overflow: hidden; /* Evita scroll duplo na página inteira */
+            overflow: hidden;
         }
 
         /* =========================================
-           3. ESTRUTURA (GRID)
+           3. ESTRUTURA (LAYOUT)
            ========================================= */
         .layout {
             display: grid;
-            grid-template-columns: 260px 1fr; /* Sidebar fixa | Conteúdo fluido */
+            grid-template-columns: 260px 1fr;
             height: 100vh;
         }
 
-        /* =========================================
-           4. SIDEBAR (Navegação)
-           ========================================= */
         .sidebar {
             background-color: var(--bg-card);
             border-right: 1px solid var(--border);
@@ -92,73 +84,36 @@
             transition: all 0.3s ease;
         }
 
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 40px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        .main-content {
+            padding: 30px;
+            overflow-y: auto;
         }
 
-        .nav-menu {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            flex: 1; /* Ocupa o espaço disponível */
+        /* =========================================
+           4. COMPONENTES VISUAIS
+           ========================================= */
+        .brand {
+            display: flex; align-items: center; gap: 12px;
+            font-size: 20px; font-weight: 700; color: var(--primary);
+            margin-bottom: 40px; text-transform: uppercase; letter-spacing: 0.5px;
         }
+
+        .nav-menu { display: flex; flex-direction: column; gap: 8px; flex: 1; }
 
         .nav-btn {
-            display: flex;
-            align-items: center;
-            gap: 12px;
+            display: flex; align-items: center; gap: 12px;
             padding: 12px 16px;
             border-radius: var(--radius);
             border: none;
             background: transparent;
             color: var(--text-muted);
-            font-weight: 500;
-            font-size: 15px;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: left;
-            width: 100%;
+            font-weight: 500; font-size: 15px;
+            cursor: pointer; transition: all 0.2s; text-align: left; width: 100%;
         }
-
         .nav-btn i { font-size: 20px; }
+        .nav-btn:hover { background-color: var(--bg-body); color: var(--primary); }
+        .nav-btn.active { background-color: var(--primary-light); color: var(--primary); font-weight: 600; }
 
-        .nav-btn:hover {
-            background-color: var(--bg-body);
-            color: var(--primary);
-        }
-
-        /* Classe ativa (opcional, para JS futuro de highlight) */
-        .nav-btn.active {
-            background-color: var(--primary-light);
-            color: var(--primary);
-            font-weight: 600;
-        }
-
-        .sidebar-footer {
-            border-top: 1px solid var(--border);
-            padding-top: 20px;
-            margin-top: 20px;
-        }
-
-        /* =========================================
-           5. CONTEÚDO PRINCIPAL & COMPONENTES JS
-           ========================================= */
-        .main-content {
-            padding: 30px;
-            overflow-y: auto; /* Scroll apenas aqui */
-        }
-
-        /* --- Estilos para os elementos gerados pelo script.js --- */
-
-        /* Container Card */
         .card {
             background: var(--bg-card);
             padding: 24px;
@@ -169,169 +124,91 @@
             animation: fadeIn 0.3s ease-in-out;
         }
 
-        /* Títulos */
-        h2, h3 { margin-bottom: 15px; color: var(--text-main); font-weight: 700; }
-        p { color: var(--text-muted); line-height: 1.5; font-size: 14px; }
-        strong { color: var(--text-main); }
-
-        /* Formulários (Inputs gerados pelo JS) */
-        label {
-            display: block;
-            margin-top: 15px;
-            margin-bottom: 6px;
-            font-size: 14px;
-            color: var(--text-main);
-            font-weight: 600;
+        /* --- NOVO: DASHBOARD GRID --- */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
         }
 
-        input, select, textarea {
-            width: 100%;
-            padding: 12px;
+        .kpi-card {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: var(--radius);
             border: 1px solid var(--border);
-            border-radius: 8px;
-            background: var(--bg-body);
-            color: var(--text-main);
-            outline: none;
-            font-size: 14px;
-            transition: border-color 0.2s;
-        }
-
-        input:focus, select:focus, textarea:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px var(--primary-light);
-        }
-
-        .row {
+            box-shadow: var(--shadow);
             display: flex;
-            gap: 15px;
-            align-items: center;
-            margin-top: 20px;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .kpi-title { font-size: 13px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+        .kpi-value { font-size: 28px; font-weight: 700; color: var(--text-main); }
+        .kpi-sub { font-size: 12px; color: var(--danger); font-weight: 500; }
+        
+        /* Containers dos Gráficos */
+        .charts-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr; /* O gráfico da esq é maior */
+            gap: 20px;
+        }
+        @media(max-width: 900px) { .charts-row { grid-template-columns: 1fr; } }
+        
+        .chart-box {
+            position: relative;
+            height: 350px; /* Altura fixa para o gráfico */
+            width: 100%;
         }
 
-        /* Botões */
-        .btn {
-            background: var(--primary);
+        /* --- NOVO: BOTÃO WHATSAPP --- */
+        .btn-whatsapp {
+            background: var(--whatsapp);
             color: #fff;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
+            gap: 6px;
             transition: background 0.2s;
+            text-decoration: none; /* Caso seja um link */
         }
+        .btn-whatsapp:hover { background: var(--whatsapp-hover); }
+
+        /* Formulários e Tabelas (Estilos Base) */
+        h2, h3 { margin-bottom: 15px; color: var(--text-main); font-weight: 700; }
+        label { display: block; margin-top: 15px; margin-bottom: 6px; font-size: 14px; color: var(--text-main); font-weight: 600; }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-body); color: var(--text-main); outline: none; font-size: 14px; }
+        input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+        
+        .btn { background: var(--primary); color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
         .btn:hover { background: var(--primary-hover); }
-        
-        .btn.ghost {
-            background: transparent;
-            color: var(--text-main);
-            border: 1px solid var(--border);
-        }
-        .btn.ghost:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-        
+        .btn.ghost { background: transparent; color: var(--text-main); border: 1px solid var(--border); }
         .btn.danger { background: var(--danger); color: white; }
-        .btn.danger:hover { opacity: 0.9; }
 
-        /* Tabelas */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 14px; }
+        th { color: var(--text-muted); font-size: 12px; text-transform: uppercase; font-weight: 600; }
         
-        th, td {
-            padding: 14px;
-            text-align: left;
-            border-bottom: 1px solid var(--border);
-            font-size: 14px;
-        }
-
-        th {
-            color: var(--text-muted);
-            font-size: 12px;
-            text-transform: uppercase;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-        
-        tr:last-child td { border-bottom: none; }
-
-        /* Status Pills (Usados nas funções de listagem do JS) */
-        .status-pill {
-            padding: 4px 10px;
-            border-radius: 50px;
-            color: #fff;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            display: inline-block;
-        }
+        .status-pill { padding: 4px 10px; border-radius: 50px; color: #fff; font-size: 11px; font-weight: 700; text-transform: uppercase; display: inline-block; }
         .st-confirmado, .st-pago { background: var(--success); }
         .st-cancelado, .st-pendente { background: var(--danger); }
         .st-remarcado, .st-parcial { background: var(--warning); }
 
-        /* Animação suave ao carregar conteúdo */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* =========================================
-           6. RESPONSIVO (MOBILE)
-           ========================================= */
+        /* Mobile */
         @media (max-width: 900px) {
-            .layout {
-                grid-template-columns: 1fr;
-                grid-template-rows: auto 1fr;
-            }
-
-            .sidebar {
-                flex-direction: row;
-                align-items: center;
-                padding: 10px 20px;
-                height: auto;
-                justify-content: space-between;
-                position: sticky;
-                top: 0;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            }
-
-            .nav-menu {
-                display: none; /* Escondido por padrão no mobile */
-                position: absolute;
-                top: 60px;
-                left: 0;
-                right: 0;
-                background: var(--bg-card);
-                padding: 20px;
-                box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-                border-bottom: 1px solid var(--border);
-            }
-
+            .layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+            .sidebar { flex-direction: row; align-items: center; padding: 10px 20px; justify-content: space-between; position: sticky; top: 0; }
+            .nav-menu { display: none; position: absolute; top: 60px; left: 0; right: 0; background: var(--bg-card); padding: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); border-bottom: 1px solid var(--border); }
             .nav-menu.mobile-open { display: flex; }
-
-            .brand { margin-bottom: 0; font-size: 18px; }
-            
             #mobile-toggle { display: block !important; }
-            
-            .main-content { padding: 15px; }
         }
-
-        #mobile-toggle {
-            display: none;
-            background: none;
-            border: none;
-            color: var(--text-main);
-            font-size: 24px;
-            cursor: pointer;
-        }
+        #mobile-toggle { display: none; background: none; border: none; color: var(--text-main); font-size: 24px; cursor: pointer; }
     </style>
 </head>
 <body data-theme="light">
@@ -340,71 +217,145 @@
         <!-- SIDEBAR -->
         <aside class="sidebar">
             <div class="brand">
-                <i class="ph ph-camera-rotate"></i>
-                Studio Albany
-                <!-- Botão Hamburger para Mobile -->
+                <i class="ph ph-camera-rotate"></i> Studio Albany
                 <button id="mobile-toggle" onclick="document.getElementById('navMenu').classList.toggle('mobile-open')">
                     <i class="ph ph-list"></i>
                 </button>
             </div>
-
-            <!-- MENU DE NAVEGAÇÃO -->
             <nav class="nav-menu" id="navMenu">
-                <!-- As funções nav('...') correspondem exatamente ao seu script.js -->
-                <button class="nav-btn" onclick="nav('home'); highlight(this)">
-                    <i class="ph ph-house"></i> Início
-                </button>
-                <button class="nav-btn" onclick="nav('agenda'); highlight(this)">
-                    <i class="ph ph-calendar-check"></i> Agenda
-                </button>
-                <button class="nav-btn" onclick="nav('clientes'); highlight(this)">
-                    <i class="ph ph-users"></i> Clientes
-                </button>
-                <button class="nav-btn" onclick="nav('pagamentos'); highlight(this)">
-                    <i class="ph ph-currency-dollar"></i> Financeiro
-                </button>
-                <button class="nav-btn" onclick="nav('eventos'); highlight(this)">
-                    <i class="ph ph-confetti"></i> Eventos
-                </button>
-                <button class="nav-btn" onclick="nav('dashboard'); highlight(this)">
-                    <i class="ph ph-chart-line-up"></i> Dashboard
-                </button>
+                <button class="nav-btn" onclick="nav('home'); highlight(this)"><i class="ph ph-house"></i> Início</button>
+                <button class="nav-btn" onclick="nav('agenda'); highlight(this)"><i class="ph ph-calendar-check"></i> Agenda</button>
+                <button class="nav-btn" onclick="nav('clientes'); highlight(this)"><i class="ph ph-users"></i> Clientes</button>
+                <button class="nav-btn" onclick="nav('pagamentos'); highlight(this)"><i class="ph ph-currency-dollar"></i> Financeiro</button>
+                <button class="nav-btn" onclick="nav('eventos'); highlight(this)"><i class="ph ph-confetti"></i> Eventos</button>
+                <button class="nav-btn active" onclick="nav('dashboard'); highlight(this)"><i class="ph ph-chart-line-up"></i> Dashboard</button>
             </nav>
-
-            <!-- FOOTER SIDEBAR (TEMA) -->
             <div class="sidebar-footer nav-menu">
-                <button class="nav-btn" onclick="toggleTheme()">
-                    <i class="ph ph-moon"></i> Alternar Tema
-                </button>
+                <button class="nav-btn" onclick="toggleTheme()"><i class="ph ph-moon"></i> Alternar Tema</button>
             </div>
         </aside>
 
-        <!-- CONTEÚDO PRINCIPAL (ONDE O JS INJETA O HTML) -->
+        <!-- MAIN -->
         <main class="main-content" id="content">
-            <!-- O conteúdo será carregado aqui pelo script.js -->
+            <!-- 
+                O CONTEÚDO AQUI É DINÂMICO.
+                Abaixo está apenas o HTML ESTÁTICO DO NOVO DASHBOARD
+                para você visualizar como o CSS vai agir quando injetarmos os dados.
+            -->
+            
+            <div class="dashboard-grid">
+                <!-- Card 1 -->
+                <div class="kpi-card">
+                    <span class="kpi-title">Faturamento Total</span>
+                    <span class="kpi-value">R$ 0,00</span>
+                    <span class="kpi-sub" style="color:var(--success)">+0% este mês</span>
+                </div>
+                <!-- Card 2 -->
+                <div class="kpi-card">
+                    <span class="kpi-title">Vendas Realizadas</span>
+                    <span class="kpi-value">0</span>
+                    <span class="kpi-sub" style="color:var(--text-muted)">Contratos fechados</span>
+                </div>
+                <!-- Card 3 (Cortesias) -->
+                <div class="kpi-card" style="border-color: var(--danger);">
+                    <span class="kpi-title" style="color:var(--danger)">Potencial em Cortesias</span>
+                    <span class="kpi-value" style="color:var(--danger)">R$ 0,00</span>
+                    <span class="kpi-sub">Valor que deixou de ganhar</span>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <!-- Gráfico de Barra -->
+                <div class="card">
+                    <h3>📈 Faturamento vs Cortesias</h3>
+                    <div class="chart-box">
+                        <canvas id="chartFaturamento"></canvas>
+                    </div>
+                </div>
+                <!-- Gráfico de Pizza -->
+                <div class="card">
+                    <h3>🍰 Tipos de Eventos</h3>
+                    <div class="chart-box">
+                        <canvas id="chartTipos"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exemplo de como ficará o botão do WhatsApp na lista -->
+            <div class="card">
+                <h3>Exemplo de Botão WhatsApp (Layout)</h3>
+                <div style="display:flex; gap:10px; align-items:center; border:1px solid var(--border); padding:10px; border-radius:8px;">
+                    <span>Cliente Exemplo (Agendamento)</span>
+                    <button class="btn-whatsapp">
+                        <i class="ph ph-whatsapp-logo"></i> Confirmar
+                    </button>
+                </div>
+            </div>
+
         </main>
     </div>
 
-    <!-- LINK PARA O ARQUIVO JAVASCRIPT SEPARADO -->
-    <script src="script.js"></script>
-
-    <!-- Script visual auxiliar para marcar botão ativo no menu -->
+    <!-- SCRIPT (Básico para navegação e estrutura de dados) -->
     <script>
-        function highlight(btn) {
-            // Remove 'active' de todos
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            // Adiciona ao clicado
-            if(btn) btn.classList.add('active');
-            // Fecha menu mobile ao clicar
-            document.getElementById('navMenu').classList.remove('mobile-open');
+        // Funções auxiliares básicas para o HTML não quebrar
+        function load(k){try{return JSON.parse(localStorage.getItem(k)||'[]')}catch(e){return[]}}
+        function save(k,v){localStorage.setItem(k,JSON.stringify(v))}
+        function highlight(btn){document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');document.getElementById('navMenu').classList.remove('mobile-open');}
+        function toggleTheme(){const t=document.body.getAttribute("data-theme");document.body.setAttribute("data-theme",t==="light"?"dark":"light");}
+
+        // Dados globais (Recuperando o que você já tem ou iniciando vazio)
+        let AG = load("albany_agenda");
+        let VD = load("albany_vendas");
+        let CL = load("albany_clientes");
+        let EV = load("albany_eventos");
+
+        // Roteamento básico
+        function nav(p) {
+            // Nota: As funções renderHome, renderAgenda, etc, serão atualizadas no próximo passo com o Script Completo.
+            // Por enquanto, se você clicar, pode dar erro pois não incluí a lógica antiga para não misturar.
+            // O foco aqui é o visual do Dashboard que já está carregado estaticamente acima.
+            if(p === 'dashboard') location.reload(); // Recarrega para ver o dashboard estático
+            else alert("Vou te mandar o Script lógico no próximo passo para ativar essas telas!");
         }
-        
-        // Marca o primeiro botão como ativo ao carregar
+
+        // Inicialização dos Gráficos (Exemplo Visual)
         window.onload = function() {
-            const firstBtn = document.querySelector('.nav-btn');
-            if(firstBtn) firstBtn.classList.add('active');
+            // Configuração visual do Chart.js (Fakes para demonstração do layout)
+            const ctx1 = document.getElementById('chartFaturamento');
+            if(ctx1) {
+                new Chart(ctx1, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai'],
+                        datasets: [{
+                            label: 'Faturamento',
+                            data: [1200, 1900, 3000, 500, 2000],
+                            backgroundColor: '#b7924b'
+                        }, {
+                            label: 'Cortesias (Perda)',
+                            data: [200, 300, 400, 100, 500],
+                            backgroundColor: '#c62828'
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+
+            const ctx2 = document.getElementById('chartTipos');
+            if(ctx2) {
+                new Chart(ctx2, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Casamento', 'Aniversário', 'Batizado'],
+                        datasets: [{
+                            data: [10, 5, 2],
+                            backgroundColor: ['#b7924b', '#ef6c00', '#2e7d32']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
         }
     </script>
-
 </body>
 </html>
