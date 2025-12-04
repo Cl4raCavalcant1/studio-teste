@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Studio Albany — Novo Layout</title>
+    <title>Studio Albany — Sistema Profissional</title>
 
     <!-- Fonte Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -124,7 +124,7 @@
             animation: fadeIn 0.3s ease-in-out;
         }
 
-        /* --- NOVO: DASHBOARD GRID --- */
+        /* --- DASHBOARD GRID --- */
         .dashboard-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -160,7 +160,7 @@
             width: 100%;
         }
 
-        /* --- NOVO: BOTÃO WHATSAPP --- */
+        /* --- BOTÃO WHATSAPP --- */
         .btn-whatsapp {
             background: var(--whatsapp);
             color: #fff;
@@ -174,7 +174,7 @@
             align-items: center;
             gap: 6px;
             transition: background 0.2s;
-            text-decoration: none; /* Caso seja um link */
+            text-decoration: none;
         }
         .btn-whatsapp:hover { background: var(--whatsapp-hover); }
 
@@ -223,12 +223,24 @@
                 </button>
             </div>
             <nav class="nav-menu" id="navMenu">
-                <button class="nav-btn" onclick="nav('home'); highlight(this)"><i class="ph ph-house"></i> Início</button>
-                <button class="nav-btn" onclick="nav('agenda'); highlight(this)"><i class="ph ph-calendar-check"></i> Agenda</button>
-                <button class="nav-btn" onclick="nav('clientes'); highlight(this)"><i class="ph ph-users"></i> Clientes</button>
-                <button class="nav-btn" onclick="nav('pagamentos'); highlight(this)"><i class="ph ph-currency-dollar"></i> Financeiro</button>
-                <button class="nav-btn" onclick="nav('eventos'); highlight(this)"><i class="ph ph-confetti"></i> Eventos</button>
-                <button class="nav-btn active" onclick="nav('dashboard'); highlight(this)"><i class="ph ph-chart-line-up"></i> Dashboard</button>
+                <button class="nav-btn active" onclick="nav('home')">
+                    <i class="ph ph-house"></i> Início
+                </button>
+                <button class="nav-btn" onclick="nav('agenda')">
+                    <i class="ph ph-calendar-check"></i> Agenda
+                </button>
+                <button class="nav-btn" onclick="nav('clientes')">
+                    <i class="ph ph-users"></i> Clientes
+                </button>
+                <button class="nav-btn" onclick="nav('pagamentos')">
+                    <i class="ph ph-currency-dollar"></i> Financeiro
+                </button>
+                <button class="nav-btn" onclick="nav('eventos')">
+                    <i class="ph ph-confetti"></i> Eventos
+                </button>
+                <button class="nav-btn" onclick="nav('dashboard')">
+                    <i class="ph ph-chart-line-up"></i> Dashboard
+                </button>
             </nav>
             <div class="sidebar-footer nav-menu">
                 <button class="nav-btn" onclick="toggleTheme()"><i class="ph ph-moon"></i> Alternar Tema</button>
@@ -237,125 +249,12 @@
 
         <!-- MAIN -->
         <main class="main-content" id="content">
-            <!-- 
-                O CONTEÚDO AQUI É DINÂMICO.
-                Abaixo está apenas o HTML ESTÁTICO DO NOVO DASHBOARD
-                para você visualizar como o CSS vai agir quando injetarmos os dados.
-            -->
-            
-            <div class="dashboard-grid">
-                <!-- Card 1 -->
-                <div class="kpi-card">
-                    <span class="kpi-title">Faturamento Total</span>
-                    <span class="kpi-value">R$ 0,00</span>
-                    <span class="kpi-sub" style="color:var(--success)">+0% este mês</span>
-                </div>
-                <!-- Card 2 -->
-                <div class="kpi-card">
-                    <span class="kpi-title">Vendas Realizadas</span>
-                    <span class="kpi-value">0</span>
-                    <span class="kpi-sub" style="color:var(--text-muted)">Contratos fechados</span>
-                </div>
-                <!-- Card 3 (Cortesias) -->
-                <div class="kpi-card" style="border-color: var(--danger);">
-                    <span class="kpi-title" style="color:var(--danger)">Potencial em Cortesias</span>
-                    <span class="kpi-value" style="color:var(--danger)">R$ 0,00</span>
-                    <span class="kpi-sub">Valor que deixou de ganhar</span>
-                </div>
-            </div>
-
-            <div class="charts-row">
-                <!-- Gráfico de Barra -->
-                <div class="card">
-                    <h3>📈 Faturamento vs Cortesias</h3>
-                    <div class="chart-box">
-                        <canvas id="chartFaturamento"></canvas>
-                    </div>
-                </div>
-                <!-- Gráfico de Pizza -->
-                <div class="card">
-                    <h3>🍰 Tipos de Eventos</h3>
-                    <div class="chart-box">
-                        <canvas id="chartTipos"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Exemplo de como ficará o botão do WhatsApp na lista -->
-            <div class="card">
-                <h3>Exemplo de Botão WhatsApp (Layout)</h3>
-                <div style="display:flex; gap:10px; align-items:center; border:1px solid var(--border); padding:10px; border-radius:8px;">
-                    <span>Cliente Exemplo (Agendamento)</span>
-                    <button class="btn-whatsapp">
-                        <i class="ph ph-whatsapp-logo"></i> Confirmar
-                    </button>
-                </div>
-            </div>
-
+            <!-- O conteúdo será injetado pelo script.js -->
         </main>
     </div>
 
-    <!-- SCRIPT (Básico para navegação e estrutura de dados) -->
-    <script>
-        // Funções auxiliares básicas para o HTML não quebrar
-        function load(k){try{return JSON.parse(localStorage.getItem(k)||'[]')}catch(e){return[]}}
-        function save(k,v){localStorage.setItem(k,JSON.stringify(v))}
-        function highlight(btn){document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');document.getElementById('navMenu').classList.remove('mobile-open');}
-        function toggleTheme(){const t=document.body.getAttribute("data-theme");document.body.setAttribute("data-theme",t==="light"?"dark":"light");}
+    <!-- LINK PARA O ARQUIVO SCRIPT -->
+    <script src="script.js"></script>
 
-        // Dados globais (Recuperando o que você já tem ou iniciando vazio)
-        let AG = load("albany_agenda");
-        let VD = load("albany_vendas");
-        let CL = load("albany_clientes");
-        let EV = load("albany_eventos");
-
-        // Roteamento básico
-        function nav(p) {
-            // Nota: As funções renderHome, renderAgenda, etc, serão atualizadas no próximo passo com o Script Completo.
-            // Por enquanto, se você clicar, pode dar erro pois não incluí a lógica antiga para não misturar.
-            // O foco aqui é o visual do Dashboard que já está carregado estaticamente acima.
-            if(p === 'dashboard') location.reload(); // Recarrega para ver o dashboard estático
-            else alert("Vou te mandar o Script lógico no próximo passo para ativar essas telas!");
-        }
-
-        // Inicialização dos Gráficos (Exemplo Visual)
-        window.onload = function() {
-            // Configuração visual do Chart.js (Fakes para demonstração do layout)
-            const ctx1 = document.getElementById('chartFaturamento');
-            if(ctx1) {
-                new Chart(ctx1, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai'],
-                        datasets: [{
-                            label: 'Faturamento',
-                            data: [1200, 1900, 3000, 500, 2000],
-                            backgroundColor: '#b7924b'
-                        }, {
-                            label: 'Cortesias (Perda)',
-                            data: [200, 300, 400, 100, 500],
-                            backgroundColor: '#c62828'
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
-            }
-
-            const ctx2 = document.getElementById('chartTipos');
-            if(ctx2) {
-                new Chart(ctx2, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Casamento', 'Aniversário', 'Batizado'],
-                        datasets: [{
-                            data: [10, 5, 2],
-                            backgroundColor: ['#b7924b', '#ef6c00', '#2e7d32']
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
-            }
-        }
-    </script>
 </body>
 </html>
