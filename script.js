@@ -1,33 +1,35 @@
 /* ===========================================================
-   1. HELPERS (FUNÇÕES DE AJUDA) E DADOS
+   1. DADOS, HELPERS E VARIÁVEIS GLOBAIS
 =========================================================== */
 
-// Função para carregar dados do navegador
+// Função para carregar dados do localStorage
 function load(key) {
-    try { return JSON.parse(localStorage.getItem(key) || '[]'); }
-    catch (e) { return []; }
+    try {
+        return JSON.parse(localStorage.getItem(key) || '[]');
+    } catch (e) {
+        return [];
+    }
 }
 
-// Função para salvar dados no navegador
+// Função para salvar dados no localStorage
 function save(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
 }
 
 // Carregar os bancos de dados
-let AG = load("albany_agenda");
-let VD = load("albany_vendas");
-let CL = load("albany_clientes");
-let EV = load("albany_eventos");
+let AG = load("albany_agenda");     // Agendamentos (Ensaios)
+let VD = load("albany_vendas");     // Vendas (Financeiro)
+let CL = load("albany_clientes");   // Clientes
+let EV = load("albany_eventos");    // Eventos (Casamentos, Festas)
 
-/* === SISTEMA DE TOAST (NOTIFICAÇÕES VISUAIS) === */
+// Sistema de Notificações (Toasts) - Substitui o alert()
 function showToast(msg, type = 'success') {
     const container = document.getElementById('toast-container');
-    if (!container) return; // Proteção caso o HTML não tenha o container
-
+    if (!container) return; 
+    
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     
-    // Ícone baseado no tipo (sucesso, erro ou aviso)
     let icon = type === 'success' ? 'check-circle' : (type === 'error' ? 'warning-circle' : 'info');
     
     toast.innerHTML = `
@@ -39,59 +41,55 @@ function showToast(msg, type = 'success') {
     
     container.appendChild(toast);
     
-    // Remove a notificação após 3.5 segundos
+    // Remove após 3.5 segundos
     setTimeout(() => {
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 300);
     }, 3500);
 }
 
-/* === HELPER PARA FORMATAR TELEFONE (WHATSAPP) === */
-function formatPhone(phone) {
-    // Remove tudo que não é número (espaços, traços, parênteses)
-    return phone.replace(/\D/g, '');
+// Formatar telefone para link do WhatsApp (remove letras/traços)
+function formatPhone(phone) { 
+    return phone.replace(/\D/g, ''); 
 }
 
 /* ===========================================================
-   2. NAVEGAÇÃO ENTRE TELAS
+   2. NAVEGAÇÃO
 =========================================================== */
 function nav(p) {
+    // Esconde/Mostra lógica simples baseada em re-renderizar o conteúdo
     if (p === "home") renderHome();
-    if (p === "agenda") renderAgenda();
+    if (p === "agenda") renderAgendaVisual(); 
     if (p === "clientes") renderClientes();
     if (p === "vendas" || p === "pagamentos") renderPagamentos(); 
-    if (p === "dashboard") renderDashboard();
+    if (p === "dashboard") renderDashboardAvancado(); 
     if (p === "eventos") renderEventos();
-    if (p === "config") renderConfig(); // Tela de Backup
+    if (p === "config") renderConfig();
 }
 
-// Alternar entre modo claro e escuro
 function toggleTheme() {
     const t = document.body.getAttribute("data-theme");
     document.body.setAttribute("data-theme", t === "light" ? "dark" : "light");
 }
 
 /* ===========================================================
-   3. HOME (DASHBOARD DIÁRIO)
+   3. HOME (RESUMO DO DIA)
 =========================================================== */
 function renderHome() {
     const hoje = new Date().toISOString().slice(0, 10);
     const content = document.getElementById('content');
-
-    // Filtra agendamentos e eventos de hoje
-    const agHoje = AG.filter(a => a.data === hoje)
-                      .sort((a,b)=> (a.hora || "00:00").localeCompare(b.hora || "00:00"));
-
-    const evHoje = EV.filter(e => e.data === hoje)
-                      .sort((a,b)=> (a.hora || "00:00").localeCompare(b.hora || "00:00"));
+    
+    // Filtros do dia
+    const agHoje = AG.filter(a => a.data === hoje).sort((a,b)=> (a.hora||"").localeCompare(b.hora||""));
+    const evHoje = EV.filter(e => e.data === hoje).sort((a,b)=> (a.hora||"").localeCompare(b.hora||""));
 
     let html = `
     <div class='card'>
         <h2>Bem-vinda, Albany!</h2>
-        <p>Resumo do dia (${hoje}):</p>
+        <p>Resumo do dia (${hoje.split('-').reverse().join('/')}):</p>
     `;
 
-    /* EVENTOS DO DIA */
+    // Secção de Eventos
     if (evHoje.length) {
         html += `<h3 style="margin-top:20px">🎪 Eventos de Hoje</h3>`;
         evHoje.forEach(e => {
@@ -100,21 +98,18 @@ function renderHome() {
                         border-radius:10px;background:var(--bg-body);margin-bottom:10px">
                 <strong>${e.diaInteiro ? "Dia inteiro" : e.hora}</strong> — ${e.cliente}<br>
                 <small>${e.tipo || 'Evento'}</small>
-            </div>
-            `;
+            </div>`;
         });
     } else {
-        html += `<p style="margin-top:20px"><em>Nenhum evento hoje.</em></p>`;
+        html += `<p style="margin-top:20px"><em>Nenhum evento especial hoje.</em></p>`;
     }
 
-    /* AGENDAMENTOS DO DIA */
-    html += `<h3 style="margin-top:20px">📷 Agendamentos de Hoje</h3>`;
-
+    // Secção de Ensaios
+    html += `<h3 style="margin-top:20px">📷 Ensaios de Hoje</h3>`;
     if (!agHoje.length) {
         html += `<p>Nenhum agendamento hoje.</p></div>`;
     } else {
         agHoje.forEach(a => {
-            // Busca telefone do cliente para criar link do WhatsApp
             const cliData = CL.find(c => c.nome === a.clienteNome);
             const phone = cliData ? formatPhone(cliData.tel) : '';
             const msg = `Olá ${a.clienteNome}, passando para confirmar nosso ensaio hoje às ${a.hora}.`;
@@ -128,79 +123,97 @@ function renderHome() {
                         <strong>${a.hora}</strong> — ${a.clienteNome}<br>
                         <span class="status-pill st-${a.status}">${a.status}</span>
                     </div>
-                    <!-- Botão do WhatsApp só aparece se tiver telefone -->
                     ${phone ? `<a href="${waLink}" target="_blank" class="btn whatsapp" title="Confirmar no Zap"><i class="ph ph-whatsapp-logo"></i></a>` : ''}
                 </div>
             `;
         });
         html += `</div>`;
     }
-
     content.innerHTML = html;
 }
 
 /* ===========================================================
-   4. AGENDA COMPLETA
+   4. AGENDA VISUAL (FULLCALENDAR) + EXPORTAÇÃO IOS
 =========================================================== */
-function renderAgenda() {
+function renderAgendaVisual() {
     const content = document.getElementById('content');
     content.innerHTML = `
     <div class='card'>
-        <h3>📅 Novo Agendamento</h3>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px; flex-wrap:wrap; gap:10px">
+            <h3>📅 Agenda Visual</h3>
+            <div style="display:flex; gap:10px">
+                <button class="btn ghost" onclick="exportarParaIOS()" title="Salvar no iPhone">
+                    <i class="ph ph-apple-logo"></i> Salvar no iOS
+                </button>
+                <button class="btn" onclick="renderAgendaForm()">+ Novo</button>
+            </div>
+        </div>
+        <div id='calendar'></div>
+    </div>`;
+
+    // Mapeia os dados para o FullCalendar
+    const eventosCalendario = [
+        ...AG.map(a => ({
+            title: `📷 ${a.clienteNome}`,
+            start: `${a.data}T${a.hora}`,
+            color: a.status === 'cancelado' ? '#ef4444' : (a.status === 'remarcado' ? '#f59e0b' : '#b7924b'),
+            extendedProps: { tipo: 'ensaio', id: a.id }
+        })),
+        ...EV.map(e => ({
+            title: `🎪 ${e.cliente} (${e.tipo})`,
+            start: e.diaInteiro ? e.data : `${e.data}T${e.hora}`,
+            color: '#10b981',
+            extendedProps: { tipo: 'evento', id: e.id }
+        }))
+    ];
+
+    setTimeout(() => {
+        var calendarEl = document.getElementById('calendar');
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listWeek' },
+            locale: 'pt-br',
+            buttonText: { today: 'Hoje', month: 'Mês', week: 'Semana', list: 'Lista' },
+            events: eventosCalendario,
+            height: 650,
+            eventClick: function(info) {
+                // Ao clicar, mostra detalhes básicos
+                alert(`Evento: ${info.event.title}\nInício: ${info.event.start.toLocaleString()}`);
+            }
+        });
+        calendar.render();
+    }, 100);
+}
+
+function renderAgendaForm() {
+    const content = document.getElementById('content');
+    content.innerHTML = `
+    <div class='card'>
+        <h3>📅 Novo Agendamento (Ensaio)</h3>
         <label>Cliente</label>
         <select id="ag_cliente">
-            <option value="">Selecione</option>
-            ${CL.map(c => `<option value="${c.nome}">${c.nome}</option>`).join("")}
+            <option>Selecione</option>
+            ${CL.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('')}
         </select>
+        
         <label>Data</label>
-        <input type="date" id="ag_data" onchange="carregarHorarios()">
+        <input type="date" id="ag_data">
+        
         <label>Horário</label>
-        <select id="ag_hora"></select>
+        <input type="time" id="ag_hora">
+        
         <label>Status</label>
         <select id="ag_status">
             <option value="confirmado">Confirmado</option>
-            <option value="cancelado">Cancelado</option>
             <option value="remarcado">Remarcado</option>
+            <option value="cancelado">Cancelado</option>
         </select>
+        
         <div class="row">
             <button class="btn" onclick="saveAgenda()">Salvar</button>
-            <button class="btn ghost" onclick="renderAgenda()">Limpar</button>
+            <button class="btn ghost" onclick="nav('agenda')">Voltar</button>
         </div>
-    </div>
-
-    <div class='card'>
-        <h3>📌 Buscar na Agenda</h3>
-        <input id="ag_search" placeholder="Pesquisar cliente..." oninput="showAgendaList()" />
-        <input type="date" id="ag_filter" onchange="showAgendaList()">
-        <div id="ag_list" style="margin-top:15px">Selecione uma data para ver os horários.</div>
-    </div>
-    `;
-}
-
-/* Gera horários das 09:00 às 20:00 */
-const HORARIOS = [];
-for (let h = 9; h <= 20; h++) {
-    HORARIOS.push(String(h).padStart(2, "0") + ":00");
-}
-
-function carregarHorarios() {
-    const data = document.getElementById("ag_data").value;
-    if (!data) return;
-    
-    // Verifica horários ocupados
-    const agendados = AG.filter(a => a.data === data).map(a => a.hora);
-    const eventosHora = EV.filter(e => e.data === data && !e.diaInteiro).map(e => e.hora);
-    const diaInteiroEvento = EV.some(e => e.data === data && e.diaInteiro);
-
-    let html = `<option value="">Selecione</option>`;
-    HORARIOS.forEach(h => {
-        if (diaInteiroEvento || agendados.includes(h) || eventosHora.includes(h)) {
-            html += `<option disabled>${h} — Ocupado</option>`;
-        } else {
-            html += `<option value="${h}">${h}</option>`;
-        }
-    });
-    document.getElementById("ag_hora").innerHTML = html;
+    </div>`;
 }
 
 function saveAgenda() {
@@ -208,378 +221,279 @@ function saveAgenda() {
     const data = document.getElementById("ag_data").value;
     const hora = document.getElementById("ag_hora").value;
     const status = document.getElementById("ag_status").value;
-
-    if (!cliente || !data || !hora) return showToast("Preencha todos os campos.", "error");
-
-    if (EV.some(e => e.data === data && e.diaInteiro)) return showToast("Dia bloqueado por evento.", "error");
-    if (EV.some(e => e.data === data && e.hora === hora)) return showToast("Horário já ocupado.", "error");
-
+    
+    if (!cliente || !data || !hora || cliente === 'Selecione') return showToast("Preencha todos os dados", "error");
+    
     AG.push({ id: Date.now(), clienteNome: cliente, data, hora, status });
     save("albany_agenda", AG);
-    showToast("Agendamento salvo!", "success");
-    showAgendaList();
+    showToast("Agendado com sucesso!");
+    nav('agenda');
 }
 
-function showAgendaList() {
-    const d = document.getElementById("ag_filter").value;
-    if (!d) return;
+// Função para gerar arquivo .ics (Calendário iOS/Google)
+function exportarParaIOS() {
+    let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//StudioAlbany//Agenda//PT\n";
 
-    const termo = (document.getElementById("ag_search").value || "").toLowerCase();
-    const list = AG.filter(x => x.data === d && x.clienteNome.toLowerCase().includes(termo))
-                   .sort((a,b)=> (a.hora || "00:00").localeCompare(b.hora || "00:00"));
-
-    const agList = document.getElementById("ag_list");
-    if (!list.length) { agList.innerHTML = "<p>Nenhum agendamento encontrado.</p>"; return; }
-
-    let html = "";
-    list.forEach(a => {
-        html += `
-        <div style="border-left:6px solid var(--accent);padding:12px;border-radius:10px;margin-bottom:10px;background:var(--bg-body)">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                    <strong>${a.hora}</strong> — ${a.clienteNome}<br>
-                    <span class="status-pill st-${a.status}">${a.status}</span>
-                </div>
-                <div style="display:flex;gap:6px">
-                    <button class="btn" onclick="remarcar(${a.id})">Remarcar</button>
-                    <button class="btn danger" onclick="delAgenda(${a.id})">Excluir</button>
-                </div>
-            </div>
-        </div>`;
+    // Adicionar Ensaios
+    AG.forEach(a => {
+        let start = a.data.replace(/-/g, '') + 'T' + a.hora.replace(/:/g, '') + '00';
+        // Assume 1 hora de duração
+        let endHour = parseInt(a.hora.split(':')[0]) + 1;
+        let end = a.data.replace(/-/g, '') + 'T' + String(endHour).padStart(2,'0') + a.hora.split(':')[1] + '00';
+        icsContent += `BEGIN:VEVENT\nSUMMARY:📷 ${a.clienteNome}\nDTSTART:${start}\nDTEND:${end}\nDESCRIPTION:Status: ${a.status}\nEND:VEVENT\n`;
     });
-    agList.innerHTML = html;
-}
 
-function remarcar(id) {
-    const ag = AG.find(x => x.id === id);
-    const novaData = prompt("Nova data (YYYY-MM-DD):", ag.data);
-    const novoHora = prompt("Novo horário (HH:MM):", ag.hora);
+    // Adicionar Eventos
+    EV.forEach(e => {
+        if(e.diaInteiro) {
+             let date = e.data.replace(/-/g, '');
+             icsContent += `BEGIN:VEVENT\nSUMMARY:🎪 ${e.cliente}\nDTSTART;VALUE=DATE:${date}\nDTEND;VALUE=DATE:${date}\nDESCRIPTION:${e.tipo}\nEND:VEVENT\n`;
+        } else {
+             let start = e.data.replace(/-/g, '') + 'T' + e.hora.replace(/:/g, '') + '00';
+             let endHour = parseInt(e.hora.split(':')[0]) + 2; // Assume 2h para eventos
+             let end = e.data.replace(/-/g, '') + 'T' + String(endHour).padStart(2,'0') + e.hora.split(':')[1] + '00';
+             icsContent += `BEGIN:VEVENT\nSUMMARY:🎪 ${e.cliente}\nDTSTART:${start}\nDTEND:${end}\nDESCRIPTION:${e.tipo}\nEND:VEVENT\n`;
+        }
+    });
 
-    if (!novaData || !novoHora) return;
+    icsContent += "END:VCALENDAR";
 
-    if (EV.some(e => e.data === novaData && e.diaInteiro)) return showToast("Dia bloqueado.", "error");
-    if (EV.some(e => e.data === novaData && e.hora === novoHora)) return showToast("Horário ocupado.", "error");
-
-    ag.data = novaData; ag.hora = novoHora; ag.status = "remarcado";
-    save("albany_agenda", AG);
-    showToast("Remarcado com sucesso!", "success");
-    showAgendaList();
-}
-
-function delAgenda(id) {
-    if (!confirm("Confirmar exclusão?")) return;
-    AG = AG.filter(x => x.id !== id);
-    save("albany_agenda", AG);
-    showToast("Agendamento excluído.", "success");
-    showAgendaList();
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.setAttribute('download', 'agenda_albany.ics');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Ficheiro gerado! Abra para adicionar ao calendário.");
 }
 
 /* ===========================================================
-   5. CLIENTES
+   5. DASHBOARD FINANCEIRO COM PERDAS (CHART.JS)
 =========================================================== */
-function renderClientes() {
+function renderDashboardAvancado() {
     const content = document.getElementById('content');
+    
+    const totalFaturado = VD.reduce((s, x) => s + Number(x.total), 0);
+    const totalPerdido = VD.reduce((s, x) => s + Number(x.valorCortesia || 0), 0);
+    const numVendas = VD.length;
+
     content.innerHTML = `
-    <div class='card'>
-        <h3>👤 Novo Cliente</h3>
-        <label>Nome</label><input id="c_nome">
-        <label>Telefone</label><input id="c_tel" placeholder="(00) 00000-0000">
-        <label>Instagram</label><input id="c_insta">
-        <label>Observações</label><textarea id="c_obs"></textarea>
-        <div class="row">
-            <button class="btn" onclick="saveCliente()">Salvar</button>
-        </div>
-    </div>
-
     <div class="card">
-        <h3>📄 Lista de Clientes</h3>
-        <input id="c_search" placeholder="Pesquisar..." oninput="showClientes()">
-        <div id="c_list"></div>
+        <h3>📊 Performance Financeira</h3>
+        
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:20px;margin-bottom:30px">
+            <div style="padding:20px;background:var(--bg-body);border-radius:10px;text-align:center">
+                <p>Faturamento Real</p>
+                <h2 style="color:var(--success)">R$ ${totalFaturado.toFixed(2)}</h2>
+            </div>
+            
+            <div style="padding:20px;background:#fff5f5;border-radius:10px;text-align:center;border:1px solid #ffcdd2">
+                <p style="color:#c62828">Perdas (Cortesias)</p>
+                <h2 style="color:#c62828">R$ ${totalPerdido.toFixed(2)}</h2>
+            </div>
+            
+            <div style="padding:20px;background:var(--bg-body);border-radius:10px;text-align:center">
+                <p>Total de Vendas</p>
+                <h2>${numVendas}</h2>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="financeChart"></canvas>
+        </div>
     </div>`;
-    showClientes();
-}
 
-function saveCliente() {
-    const nome = document.getElementById("c_nome").value.trim();
-    if (!nome) return showToast("Informe o nome", "error");
-
-    CL.push({
-        id: Date.now(),
-        nome: nome,
-        tel: document.getElementById("c_tel").value,
-        insta: document.getElementById("c_insta").value,
-        obs: document.getElementById("c_obs").value
-    });
-    save("albany_clientes", CL);
-    showToast("Cliente salvo!", "success");
-    renderClientes();
-}
-
-function showClientes() {
-    const termo = (document.getElementById("c_search").value || "").toLowerCase();
-    const lista = CL.filter(c => c.nome.toLowerCase().includes(termo));
-    const cList = document.getElementById("c_list");
-
-    if (!lista.length) { cList.innerHTML = "<p>Nenhum cliente cadastrado.</p>"; return; }
-
-    let html = `<table><thead><tr><th>Nome</th><th>Contato</th><th>Insta</th><th>Ações</th></tr></thead><tbody>`;
-    lista.forEach(c => {
-        const phone = formatPhone(c.tel || "");
-        // Cria botão do WhatsApp se tiver número
-        const waBtn = phone 
-            ? `<a href="https://wa.me/55${phone}" target="_blank" class="btn whatsapp" style="padding:6px 10px"><i class="ph ph-whatsapp-logo"></i></a>` 
-            : `<button class="btn ghost" disabled style="opacity:0.5;padding:6px 10px"><i class="ph ph-whatsapp-logo"></i></button>`;
-
-        html += `<tr>
-            <td>${c.nome}</td>
-            <td>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    ${c.tel}
-                    ${waBtn}
-                </div>
-            </td>
-            <td>${c.insta}</td>
-            <td><button class="btn danger" onclick="delCliente(${c.id})">Excluir</button></td>
-        </tr>`;
-    });
-    html += "</tbody></table>";
-    cList.innerHTML = html;
-}
-
-function delCliente(id) {
-    if (!confirm("Excluir cliente?")) return;
-    CL = CL.filter(x => x.id !== id);
-    save("albany_clientes", CL);
-    showToast("Cliente removido.", "success");
-    showClientes();
+    setTimeout(() => {
+        const ctx = document.getElementById('financeChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Faturamento Real', 'Valor em Cortesias (Perdas)'],
+                datasets: [{
+                    data: [totalFaturado, totalPerdido],
+                    backgroundColor: ['#2e7d32', '#c62828'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }, 100);
 }
 
 /* ===========================================================
-   6. PAGAMENTOS E VENDAS
+   6. PAGAMENTOS E GERADOR DE PDF (JSPDF)
 =========================================================== */
 function renderPagamentos() {
     const content = document.getElementById('content');
     content.innerHTML = `
     <div class='card'>
-        <h3>💳 Registrar Venda / Pagamento</h3>
+        <h3>💳 Nova Venda</h3>
         <label>Cliente</label>
         <select id="p_cliente">
-            <option value="">Selecione</option>
-            ${CL.map(c => `<option value="${c.nome}">${c.nome}</option>`).join("")}
+            <option>Selecione</option>
+            ${CL.map(c=>`<option>${c.nome}</option>`).join('')}
         </select>
+        
         <label>Pacote</label>
         <select id='p_pac' onchange="atualizarPrevisao()">
             <option value='p1'>Pacote 1 - R$70 (Extra R$10)</option>
             <option value='p2'>Pacote 2 - R$100 (Extra R$15)</option>
             <option value='cortesia'>Cortesia</option>
         </select>
+        
         <div class="row">
-            <div style="flex:1"><label>Extras Pagos</label><input type="number" id="p_ext" value="0" min="0" onchange="atualizarPrevisao()"></div>
-            <div style="flex:1"><label>Cortesias</label><input type="number" id="p_cortesia" value="0" min="0" onchange="atualizarPrevisao()"></div>
+            <div style="flex:1"><label>Extras (Qtd)</label><input type="number" id="p_ext" value="0" onchange="atualizarPrevisao()"></div>
+            <div style="flex:1"><label>Cortesias (Qtd)</label><input type="number" id="p_cortesia" value="0" onchange="atualizarPrevisao()"></div>
         </div>
-        <p id="feedback_cortesia" style="font-size:13px;color:#d32f2f;margin:5px 0 0 0;display:none;font-weight:bold"></p>
-        <label>Valor total (R$)</label><input type="number" id="p_total" placeholder="Ex: 150" step="0.01">
-        <label>Pagamento agora (R$)</label><input type="number" id="p_pago_agora" value="0" step="0.01">
+        
+        <p id="feedback_cortesia" style="color:#d32f2f;font-weight:bold;display:none;margin-top:10px"></p>
+        
+        <label>Total a Cobrar (R$)</label><input type="number" id="p_total">
+        <label>Pago Agora</label><input type="number" id="p_pago_agora" value="0">
         <label>Forma</label>
         <select id="p_forma">
-            <option value="pix">PIX</option>
-            <option value="dinheiro">Dinheiro</option>
-            <option value="credito">Crédito</option>
-            <option value="debito">Débito</option>
+            <option>PIX</option>
+            <option>Dinheiro</option>
+            <option>Cartão</option>
         </select>
-        <div class="row">
-            <button class="btn" onclick="savePagamentoVenda()">Salvar Venda</button>
-            <button class="btn ghost" onclick="renderPagamentos()">Limpar</button>
-        </div>
+        
+        <div class="row"><button class="btn" onclick="savePagamentoVenda()">Salvar Venda</button></div>
     </div>
+    
     <div class='card'>
-        <h3>📄 Vendas Recentes</h3>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
-            <label style="margin:0">Status:</label>
-            <select id="p_filter_status" onchange="showPagamentos()" style="width:auto">
-                <option value="todos">Todos</option>
-                <option value="pago">Pago</option>
-                <option value="parcial">Parcial</option>
-                <option value="pendente">Pendente</option>
-            </select>
-            <input id="p_search" placeholder="Pesquisar..." oninput="showPagamentos()" style="margin-left:10px;flex:1" />
-        </div>
+        <h3>📄 Histórico de Vendas</h3>
         <div id='p_list'></div>
-    </div>
-    <div id="p_details_container"></div>
-    `;
+    </div>`;
+    
     atualizarPrevisao();
     showPagamentos();
 }
 
-function calcTotal(p, e) {
-    e = Number(e) || 0;
-    if (p === "p1") return 70 + (e * 10);
-    if (p === "p2") return 100 + (e * 15);
-    return 0;
-}
-
 function atualizarPrevisao() {
     const pac = document.getElementById('p_pac').value;
-    const ext = document.getElementById('p_ext').value;
-    const cortesia = Number(document.getElementById('p_cortesia').value || 0);
-    const elTotal = document.getElementById('p_total');
-    const fbCortesia = document.getElementById('feedback_cortesia');
+    const ext = Number(document.getElementById('p_ext').value);
+    const cort = Number(document.getElementById('p_cortesia').value);
+    const fb = document.getElementById('feedback_cortesia');
     
-    const valor = calcTotal(pac, ext);
-    if (pac !== 'cortesia') elTotal.value = valor.toFixed(2);
-    else elTotal.value = "0.00";
-
-    let precoExtra = (pac === 'p1') ? 10 : (pac === 'p2' ? 15 : 0);
-    const valorPerdido = cortesia * precoExtra;
+    let base = pac === 'p1' ? 70 : (pac === 'p2' ? 100 : 0);
+    let extraVal = pac === 'p1' ? 10 : 15;
     
-    if (valorPerdido > 0) {
-        fbCortesia.style.display = 'block';
-        fbCortesia.innerText = `⚠️ Valor em cortesias (não cobrado): R$ ${valorPerdido.toFixed(2)}`;
-    } else { fbCortesia.style.display = 'none'; }
+    document.getElementById('p_total').value = (pac === 'cortesia' ? 0 : base + (ext * extraVal)).toFixed(2);
+    
+    let perda = cort * extraVal;
+    if (perda > 0) {
+        fb.style.display = 'block';
+        fb.innerText = `⚠️ Perda estimada: R$ ${perda.toFixed(2)}`;
+    } else { fb.style.display = 'none'; }
 }
 
 function savePagamentoVenda() {
     const nome = document.getElementById('p_cliente').value;
-    const pacote = document.getElementById('p_pac').value;
-    const extras = Number(document.getElementById('p_ext').value || 0);
-    const cortesia = Number(document.getElementById('p_cortesia').value || 0);
-    const totalInput = Number(document.getElementById('p_total').value || 0);
-    const pagoAgora = Number(document.getElementById('p_pago_agora').value || 0);
+    const pac = document.getElementById('p_pac').value;
+    const ext = Number(document.getElementById('p_ext').value);
+    const cort = Number(document.getElementById('p_cortesia').value);
+    const total = Number(document.getElementById('p_total').value);
+    const pago = Number(document.getElementById('p_pago_agora').value);
     const forma = document.getElementById('p_forma').value;
 
-    if (!nome) return showToast("Informe o cliente.", "error");
-    
-    const totalFinal = totalInput > 0 ? totalInput : calcTotal(pacote, extras);
-    if (totalFinal <= 0 && pacote !== "cortesia") return showToast("Valor total inválido.", "error");
+    if(nome === 'Selecione') return showToast("Selecione um cliente", "error");
 
-    let precoExtra = (pacote === 'p1') ? 10 : (pacote === 'p2' ? 15 : 0);
-    const venda = {
-        id: Date.now(),
-        nome, pacote, extras, cortesia,
-        valorCortesia: cortesia * precoExtra,
-        total: Number(totalFinal.toFixed(2)),
-        pagamentos: [],
+    let extraVal = pac === 'p1' ? 10 : 15;
+    let valorPerdido = cort * extraVal;
+
+    VD.push({
+        id: Date.now(), 
+        nome, 
+        pacote: pac, 
+        extras: ext, 
+        cortesia: cort, 
+        valorCortesia: valorPerdido, 
+        total, 
+        pagamentos: pago > 0 ? [{valor: pago, forma, data: new Date().toISOString()}] : [], 
         createdAt: new Date().toISOString()
-    };
-
-    if (pagoAgora > 0) {
-        venda.pagamentos.push({ valor: Number(pagoAgora.toFixed(2)), forma, data: new Date().toISOString() });
-    }
-
-    VD.push(venda);
+    });
+    
     save("albany_vendas", VD);
-    showToast("Venda registrada!", "success");
+    showToast("Venda registada!");
     renderPagamentos();
 }
 
-function totalPago(v) {
-    if (!v.pagamentos || !v.pagamentos.length) return 0;
-    return v.pagamentos.reduce((s,x) => s + Number(x.valor || 0), 0);
-}
-
-function statusVenda(v) {
-    const pago = totalPago(v);
-    if (pago >= (v.total - 0.01)) return "pago";
-    if (pago > 0) return "parcial";
-    return "pendente";
-}
-
 function showPagamentos() {
-    const termo = (document.getElementById("p_search").value || "").toLowerCase();
-    const filtro = (document.getElementById("p_filter_status").value || "todos");
-    let lista = VD.slice().reverse();
-
-    if (filtro !== "todos") lista = lista.filter(v => statusVenda(v) === filtro);
-    if (termo) lista = lista.filter(v => v.nome.toLowerCase().includes(termo) || (v.pacote || "").toLowerCase().includes(termo));
-
-    const pList = document.getElementById("p_list");
-    if (!lista.length) { pList.innerHTML = "<p>Nenhuma venda encontrada.</p>"; return; }
-
-    let html = `<table><thead><tr><th>Data</th><th>Cliente</th><th>Total</th><th>Pago</th><th>Status</th><th>Ações</th></tr></thead><tbody>`;
-    lista.forEach(v => {
-        const pago = totalPago(v);
-        const stat = statusVenda(v);
-        let stClass = stat === 'pago' ? "st-pago" : (stat === 'parcial' ? "st-parcial" : "st-pendente");
-        let stLabel = stat === 'pago' ? "Pago" : (stat === 'parcial' ? "Parcial" : "Pendente");
-
-        html += `
-        <tr>
+    const list = document.getElementById('p_list');
+    if(!VD.length) { list.innerHTML = "<p>Nenhuma venda registada.</p>"; return; }
+    
+    let html = `<table><thead><tr><th>Data</th><th>Cliente</th><th>Total</th><th>Perda</th><th>Ações</th></tr></thead><tbody>`;
+    VD.slice().reverse().forEach(v => {
+        html += `<tr>
             <td>${new Date(v.createdAt).toLocaleDateString()}</td>
-            <td>${v.nome}<br><small>${v.pacote}</small></td>
+            <td>${v.nome}</td>
             <td>R$ ${v.total.toFixed(2)}</td>
-            <td>R$ ${pago.toFixed(2)}</td>
-            <td><span class="status-pill ${stClass}">${stLabel}</span></td>
-            <td style="display:flex;gap:6px">
-                <button class="btn" onclick="openPagamentoDetalhes(${v.id})">Detalhes</button>
+            <td style="color:#c62828">R$ ${(v.valorCortesia || 0).toFixed(2)}</td>
+            <td>
+                <button class="btn ghost" onclick="gerarPDF(${v.id})" title="Baixar PDF"><i class="ph ph-file-pdf"></i></button>
                 <button class="btn danger" onclick="delVenda(${v.id})">X</button>
             </td>
         </tr>`;
     });
-    html += "</tbody></table>";
-    pList.innerHTML = html;
+    html += `</tbody></table>`;
+    list.innerHTML = html;
 }
 
-function openPagamentoDetalhes(id) {
+// Gerar PDF
+function gerarPDF(id) {
     const v = VD.find(x => x.id === id);
     if (!v) return;
-    const pago = totalPago(v);
-    const falta = Math.max(0, v.total - pago);
-    const container = document.getElementById("p_details_container");
 
-    let infoCortesia = v.cortesia > 0 ? `<p style="color:#d32f2f"><strong>Cortesias:</strong> ${v.cortesia} fotos</p>` : "";
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
 
-    let html = `
-    <div class="card" style="border:2px solid var(--accent); margin-top:20px;">
-        <h3>Detalhes — ${v.nome}</h3>
-        <p><strong>Pacote:</strong> ${v.pacote} — <strong>Extras:</strong> ${v.extras || 0}</p>
-        ${infoCortesia}
-        <p><strong>Total:</strong> R$ ${v.total.toFixed(2)} — <strong>Falta:</strong> <span style="color:${falta>0?'red':'green'}">R$ ${falta.toFixed(2)}</span></p>
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(183, 146, 75);
+    doc.text("STUDIO ALBANY", 105, 20, null, null, "center");
+    
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Recibo de Venda", 105, 30, null, null, "center");
 
-        <h4>Histórico</h4>
-        ${v.pagamentos.length ? '<table><thead><tr><th>Data</th><th>Valor</th><th>Forma</th></tr></thead><tbody>' : '<p>Sem pagamentos.</p>'}
-        ${v.pagamentos.map(p => `<tr><td>${new Date(p.data).toLocaleString()}</td><td>R$ ${Number(p.valor).toFixed(2)}</td><td>${p.forma}</td></tr>`).join('')}
-        ${v.pagamentos.length ? '</tbody></table>' : ''}
+    doc.setLineWidth(0.5);
+    doc.line(20, 35, 190, 35);
 
-        <h4 style="margin-top:15px">Adicionar Pagamento</h4>
-        <div class="row">
-            <input id="p_add_valor_${id}" type="number" placeholder="Valor" step="0.01">
-            <select id="p_add_forma_${id}"><option value="pix">PIX</option><option value="dinheiro">Dinheiro</option></select>
-            <button class="btn" onclick="addPagamento(${id})">Adicionar</button>
-        </div>
-        <button class="btn ghost" style="margin-top:15px" onclick="document.getElementById('p_details_container').innerHTML=''">Fechar</button>
-    </div>
-    `;
-    container.innerHTML = html;
-    container.scrollIntoView({ behavior: 'smooth' });
-}
+    doc.setFont("helvetica", "normal");
+    doc.text(`Cliente: ${v.nome}`, 20, 50);
+    doc.text(`Data: ${new Date(v.createdAt).toLocaleDateString()}`, 140, 50);
+    doc.text(`Pacote: ${v.pacote}`, 20, 60);
+    
+    if (v.extras > 0) doc.text(`Extras: ${v.extras}`, 20, 70);
+    if (v.cortesia > 0) doc.text(`Cortesias: ${v.cortesia}`, 20, 80);
 
-function addPagamento(id) {
-    const v = VD.find(x => x.id === id);
-    const inputId = document.getElementById(`p_add_valor_${id}`);
-    const inputForma = document.getElementById(`p_add_forma_${id}`);
-    const valor = Number(inputId.value || 0);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(`Valor Total: R$ ${v.total.toFixed(2)}`, 140, 100);
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "italic");
+    doc.text("Obrigado pela preferência!", 105, 130, null, null, "center");
 
-    if (valor <= 0) return showToast("Valor inválido.", "error");
-
-    v.pagamentos.push({ valor: Number(valor.toFixed(2)), forma: inputForma.value, data: new Date().toISOString() });
-    save("albany_vendas", VD);
-    showToast("Pagamento adicionado!", "success");
-    openPagamentoDetalhes(id);
-    showPagamentos();
+    doc.save(`Recibo_Albany_${v.nome}.pdf`);
+    showToast("PDF descarregado!");
 }
 
 function delVenda(id) {
-    if (!confirm("Excluir venda?")) return;
-    VD = VD.filter(v => v.id !== id);
-    save("albany_vendas", VD);
-    document.getElementById("p_details_container").innerHTML = "";
-    showToast("Venda excluída.", "success");
-    showPagamentos();
+    if(confirm("Apagar venda?")) { 
+        VD = VD.filter(x => x.id !== id); 
+        save("albany_vendas", VD); 
+        showPagamentos(); 
+    }
 }
 
 /* ===========================================================
-   7. EVENTOS
+   7. EVENTOS (Restaurado Completo)
 =========================================================== */
 function renderEventos() {
     const content = document.getElementById('content');
@@ -587,43 +501,64 @@ function renderEventos() {
     <div class='card'>
         <h3>🎪 Novo Evento</h3>
         <label>Cliente</label>
-        <select id="ev_cliente"><option value="">Selecione</option>${CL.map(c => `<option value="${c.nome}">${c.nome}</option>`).join("")}</select>
-        <label>Tipo</label>
-        <select id="ev_tipo">
+        <select id="ev_cliente">
             <option value="">Selecione</option>
-            <option value="Pre Wedding">Pre Wedding</option><option value="Casamento">Casamento</option>
-            <option value="Batizado">Batizado</option><option value="Chá revelação">Chá revelação</option>
-            <option value="Festa Infantil">Festa Infantil</option><option value="Formatura">Formatura</option>
-            <option value="Ensaio Externo">Ensaio Externo</option><option value="Outros">Outros</option>
+            ${CL.map(c => `<option value="${c.nome}">${c.nome}</option>`).join("")}
         </select>
+        
+        <label>Tipo de Evento</label>
+        <select id="ev_tipo">
+            <option value="Pre Wedding">Pre Wedding</option>
+            <option value="Casamento">Casamento</option>
+            <option value="Batizado">Batizado</option>
+            <option value="Chá revelação">Chá revelação</option>
+            <option value="Festa Infantil">Festa Infantil</option>
+            <option value="Formatura">Formatura</option>
+            <option value="Outros">Outros</option>
+        </select>
+
         <label>Dia inteiro?</label>
-        <select id="ev_diaInteiro" onchange="toggleEventoHorario()"><option value="nao">Não</option><option value="sim">Sim</option></select>
-        <label>Data</label><input type="date" id="ev_data" onchange="carregarHorariosEvento()">
-        <label id="lbl_ev_hora">Horário</label><select id="ev_hora"></select>
-        <div class="row"><button class="btn" onclick="saveEvento()">Salvar</button></div>
+        <select id="ev_diaInteiro" onchange="toggleEventoHorario()">
+            <option value="nao">Não</option>
+            <option value="sim">Sim</option>
+        </select>
+        
+        <label>Data</label>
+        <input type="date" id="ev_data">
+        
+        <label id="lbl_ev_hora">Horário</label>
+        <input type="time" id="ev_hora">
+        
+        <div class="row">
+            <button class="btn" onclick="saveEvento()">Salvar</button>
+        </div>
     </div>
+    
     <div class="card">
         <h3>📄 Lista de Eventos</h3>
         <input type="date" id="ev_filter" onchange="showEventos()">
         <div id="ev_list" style="margin-top:15px">Selecione uma data</div>
-    </div>`;
-    setTimeout(() => { try { toggleEventoHorario(); } catch (err) {} }, 0);
+    </div>
+    `;
+    
+    // Inicia estado do horário
+    setTimeout(() => toggleEventoHorario(), 100);
 }
 
 function toggleEventoHorario() {
-    const diaInteiro = document.getElementById("ev_diaInteiro").value === "sim";
+    const el = document.getElementById("ev_diaInteiro");
+    if (!el) return;
+    const diaInteiro = el.value === "sim";
     const label = document.getElementById("lbl_ev_hora");
-    const select = document.getElementById("ev_hora");
-    if (diaInteiro) { select.style.display = "none"; label.style.display = "none"; } 
-    else { select.style.display = "block"; label.style.display = "block"; }
-}
-
-function carregarHorariosEvento() {
-    const data = document.getElementById("ev_data").value;
-    if (!data) return;
-    let html = `<option value="">Selecione</option>`;
-    HORARIOS.forEach(h => html += `<option value="${h}">${h}</option>`);
-    document.getElementById("ev_hora").innerHTML = html;
+    const input = document.getElementById("ev_hora");
+    
+    if (diaInteiro) {
+        input.style.display = "none";
+        label.style.display = "none";
+    } else {
+        input.style.display = "block";
+        label.style.display = "block";
+    }
 }
 
 function saveEvento() {
@@ -633,11 +568,18 @@ function saveEvento() {
     const hora = document.getElementById("ev_hora").value;
     const diaInteiro = document.getElementById("ev_diaInteiro").value === "sim";
 
-    if (!cliente || !data || !tipo) return showToast("Preencha campos obrigatórios.", "error");
+    if (!cliente || !data || !tipo || cliente === 'Selecione') return showToast("Preencha campos obrigatórios.", "error");
     
-    EV.push({ id: Date.now(), cliente, tipo, data, hora: diaInteiro ? null : hora, diaInteiro });
+    EV.push({
+        id: Date.now(),
+        cliente, 
+        tipo, 
+        data, 
+        hora: diaInteiro ? null : hora, 
+        diaInteiro
+    });
     save("albany_eventos", EV);
-    showToast("Evento salvo!", "success");
+    showToast("Evento salvo!");
     showEventos();
 }
 
@@ -646,12 +588,18 @@ function showEventos() {
     if (!d) return;
     const lista = EV.filter(e => e.data === d);
     const div = document.getElementById("ev_list");
-    if (!lista.length) { div.innerHTML = "<p>Nenhum evento.</p>"; return; }
     
+    if (!lista.length) {
+        div.innerHTML = "<p>Nenhum evento.</p>";
+        return;
+    }
     let html = "";
     lista.forEach(e => {
         html += `<div style="padding:10px;border-bottom:1px solid #ddd;display:flex;justify-content:space-between">
-            <div><strong>${e.diaInteiro ? "Dia Todo" : e.hora}</strong> — ${e.cliente}<br><small>${e.tipo}</small></div>
+            <div>
+                <strong>${e.diaInteiro ? "Dia Todo" : e.hora}</strong> — ${e.cliente}<br>
+                <small>${e.tipo || 'Evento'}</small>
+            </div>
             <button class="btn danger" onclick="delEvento(${e.id})">Excluir</button>
         </div>`;
     });
@@ -662,53 +610,64 @@ function delEvento(id) {
     if(!confirm("Excluir?")) return;
     EV = EV.filter(e => e.id !== id);
     save("albany_eventos", EV);
-    showToast("Evento excluído.", "success");
     showEventos();
 }
 
 /* ===========================================================
-   8. DASHBOARD & CONFIGURAÇÕES (BACKUP)
+   8. CLIENTES
 =========================================================== */
-function renderDashboard() {
-    const total = VD.reduce((s, x) => s + Number(x.total), 0);
+function renderClientes() {
     const content = document.getElementById('content');
     content.innerHTML = `
-    <div class="card">
-        <h3>📊 Dashboard Financeiro</h3>
-        <p><strong>Total faturado (Geral):</strong> R$ ${total.toFixed(2)}</p>
-        <p><strong>Vendas registradas:</strong> ${VD.length}</p>
-        <p><strong>Clientes cadastrados:</strong> ${CL.length}</p>
-    </div>`;
+    <div class='card'><h3>👤 Novo Cliente</h3><label>Nome</label><input id="c_nome"><label>Tel</label><input id="c_tel"><div class="row"><button class="btn" onclick="saveCliente()">Salvar</button></div></div>
+    <div class='card'><h3>📄 Clientes</h3><div id="c_list"></div></div>`;
+    showClientes();
 }
+function saveCliente() {
+    const nome = document.getElementById("c_nome").value;
+    const tel = document.getElementById("c_tel").value;
+    if(!nome) return showToast("Nome obrigatório", "error");
+    CL.push({ id: Date.now(), nome, tel });
+    save("albany_clientes", CL);
+    showToast("Cliente salvo!");
+    renderClientes();
+}
+function showClientes() {
+    const div = document.getElementById("c_list");
+    if(!CL.length) { div.innerHTML = "<p>Sem clientes.</p>"; return; }
+    let html = `<table><thead><tr><th>Nome</th><th>Tel</th><th>Ação</th></tr></thead><tbody>`;
+    CL.forEach(c => {
+        let wa = c.tel ? `<a href="https://wa.me/55${formatPhone(c.tel)}" target="_blank" class="btn whatsapp" style="padding:4px 8px"><i class="ph ph-whatsapp-logo"></i></a>` : '';
+        html += `<tr><td>${c.nome}</td><td>${c.tel} ${wa}</td><td><button class="btn danger" onclick="delCliente(${c.id})">X</button></td></tr>`;
+    });
+    div.innerHTML = html + "</tbody></table>";
+}
+function delCliente(id) { if(confirm("Excluir?")) { CL = CL.filter(c=>c.id!==id); save("albany_clientes", CL); showClientes(); } }
 
-/* === NOVA TELA: CONFIGURAÇÕES E BACKUP === */
+/* ===========================================================
+   9. CONFIGURAÇÕES & BACKUP (Restaurado)
+=========================================================== */
 function renderConfig() {
     const content = document.getElementById('content');
     content.innerHTML = `
-    <div class="card">
-        <h3>⚙️ Configurações & Segurança</h3>
-        <p>Use esta área para salvar seus dados e evitar perdas.</p>
+    <div class='card'>
+        <h3>Configurações & Backup</h3>
+        <p>Segurança dos dados:</p>
         
-        <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:20px">
-            <h4>💾 Backup (Salvar Dados)</h4>
-            <p>Baixe um arquivo com todos os seus agendamentos e clientes.</p>
-            <button class="btn" onclick="exportarDados()">
-                <i class="ph ph-download-simple"></i> Baixar Backup
-            </button>
+        <div style="margin-top:15px; border-top:1px solid #eee; padding-top:15px;">
+            <h4>Salvar Backup</h4>
+            <p>Baixe um ficheiro com todos os dados.</p>
+            <button class="btn" onclick="exportarDados()">Baixar Backup</button>
         </div>
 
-        <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:20px">
-            <h4>📂 Restaurar Dados</h4>
-            <p>Carregue um arquivo de backup salvo anteriormente.</p>
-            <input type="file" id="file_import" accept=".json" style="margin-bottom:10px">
-            <button class="btn ghost" onclick="importarDados()">
-                <i class="ph ph-upload-simple"></i> Restaurar Dados
-            </button>
+        <div style="margin-top:15px; border-top:1px solid #eee; padding-top:15px;">
+            <h4>Restaurar Backup</h4>
+            <input type="file" id="file_import" accept=".json">
+            <button class="btn ghost" onclick="importarDados()">Carregar Backup</button>
         </div>
-        
-        <div style="margin-top:30px; background:#fff5f5; padding:15px; border-radius:10px; border:1px solid #ffcdd2">
-            <h4 style="color:var(--danger)">⚠️ Área de Perigo</h4>
-            <button class="btn danger" onclick="limparTudo()">Apagar TUDO do sistema</button>
+
+        <div style="margin-top:30px; border-top:1px solid #eee; padding-top:15px;">
+            <button class="btn danger" onclick="limparTudo()">Reset Total (Apagar Tudo)</button>
         </div>
     </div>`;
 }
@@ -728,12 +687,12 @@ function exportarDados() {
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-    showToast("Backup baixado com sucesso!", "success");
+    showToast("Backup baixado!");
 }
 
 function importarDados() {
     const input = document.getElementById('file_import');
-    if (!input.files.length) return showToast("Selecione um arquivo .json", "error");
+    if (!input.files.length) return showToast("Selecione um ficheiro", "error");
     
     const file = input.files[0];
     const reader = new FileReader();
@@ -746,24 +705,24 @@ function importarDados() {
                 VD = json.vendas; save("albany_vendas", VD);
                 CL = json.clientes; save("albany_clientes", CL);
                 EV = json.eventos; save("albany_eventos", EV);
-                showToast("Dados restaurados! A página será recarregada.", "success");
-                setTimeout(() => location.reload(), 2000);
+                showToast("Dados restaurados! A recarregar...");
+                setTimeout(() => location.reload(), 1500);
             } else {
-                showToast("Arquivo inválido.", "error");
+                showToast("Ficheiro inválido", "error");
             }
         } catch (err) {
-            showToast("Erro ao ler arquivo.", "error");
+            showToast("Erro ao ler ficheiro", "error");
         }
     };
     reader.readAsText(file);
 }
 
-function limparTudo() {
-    if(confirm("TEM CERTEZA? Isso apagará todos os clientes e agendamentos para sempre!")) {
-        localStorage.clear();
-        location.reload();
-    }
+function limparTudo() { 
+    if(confirm("CUIDADO: Isso apagará todos os dados do sistema!")) { 
+        localStorage.clear(); 
+        location.reload(); 
+    } 
 }
 
-/* INICIALIZAÇÃO */
+// Iniciar a aplicação na Home
 renderHome();

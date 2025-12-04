@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ícones do Projeto Studio Albany</title>
+    
+    <!-- Importando a mesma biblioteca do seu projeto -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f4f4f6; color: #333; padding: 40px; }
+        h1 { text-align: center; margin-bottom: 40px; color: #b7924b; }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .icon-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+            cursor: pointer;
+            border: 1px solid #eee;
+        }
+
+        .icon-card:hover { transform: translateY(-5px); border-color: #b7924b; }
+
+        .icon-card i {
+            font-size: 40px;
+            color: #b7924b;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .code {
+            background: #eee;
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: monospace;
+            color: #555;
+            display: block;
+            margin-top: 5px;
+        }
+
+        .label { font-size: 14px; font-weight: 600; margin-bottom: 5px; display: block; }
+    </style>
+</head>
+<body>
+
+    <h1>Galeria de Ícones Usados</h1>
+
+    <div class="grid">
+        <!-- Ícones do Menu -->
+        <div class="icon-card" onclick="copiar('ph-house')">
+            <i class="ph ph-house"></i>
+            <span class="label">Início</span>
+            <span class="code">ph-house</span>
+        </div>
+
+        <div class="icon-card" onclick="copiar('ph-calendar-check')">
+            <i class="ph ph-calendar-check"></i>
+            <span class="label">Agenda</span>
+            <span class="code">ph-calendar-check</span>
+        </div>
+
+        <div class="icon-card" onclick="copiar('ph-users')">
+            <i class="ph ph-users"></i>
+            <span class="label">Clientes</span>
+            <span class="code">ph-users</span>
+        </div>
+
+        <div class="icon-card" onclick="copiar('ph-currency-dollar')">
+            <i class="ph ph-currency-dollar"></i>
+            <span class="label">Financeiro</span>
+            <span class="code">ph-currency-dollar</span>
+        </div>
+
+        <div class="icon-card" onclick="copiar('ph-confetti')">
+            <i class="ph ph-confetti"></i>
+            <span class="label">Eventos</span>
+            <span class="code">ph-confetti</span>
+        </div>
+
+        <div class="icon-card" onclick="copiar('ph-gear')">
+            <i class="ph ph-gear"></i>
+            <span class="label">Config</span>
+            <span class="code">ph-gear</span>
+        </div>
+
+        <!-- Ícones de Ação e UI -->
+        <div class="icon-card" onclick="copiar('ph-camera-rotate')">
+            <i class="ph ph-camera-rotate"></i>
+            <span class="label">Logo</span>
+            <span class="code">ph-camera-rotate</span>
+        </div>
+
+        <div class="icon-card" onclick="copiar('ph-moon')">
+            <i class="ph ph-moon"></i>
+            <span class="label">Tema Escuro</span>
+            <span class="code">ph-moon</span>
+        </div>
+
+        <div class="icon-card" onclick="copiar('ph-list')">
+            <i class="ph ph-list"></i>
+            <span class="label">Menu Mobile</span>
+            <span class="code">ph-list</span>
+        </div>
+
+        <div class="icon-card" onclick="copiar('ph-whatsapp-logo')">
+            <i class="ph ph-whatsapp-logo"></i>
+            <span class="label">WhatsApp</span>
+            <span class="code">ph-whatsapp-logo</span>
+        </div>
+
+        <!-- Ícones de Sistema (Backup e Avisos) -->
+        <div class="icon-card" onclick="copiar('ph-download-simple')">
+            <i class="ph ph-download-simple"></i>
+            <span class="label">Download</span>
+            <span class="code">ph-download-simple</span>
+        </div>
+
+        <div class="icon-card" onclick="copiar('ph-upload-simple')">
+            <i class="ph ph-upload-simple"></i>
+            <span class="label">Upload</span>
+            <span class="code">ph-upload-simple</span>
+        </div>
+
+        <div class="icon-card" onclick="copiar('ph-check-circle')">
+            <i class="ph ph-check-circle" style="color:green"></i>
+            <span class="label">Sucesso</span>
+            <span class="code">ph-check-circle</span>
+        </div>
+
+        <div class="icon-card" onclick="copiar('ph-warning-circle')">
+            <i class="ph ph-warning-circle" style="color:red"></i>
+            <span class="label">Erro</span>
+            <span class="code">ph-warning-circle</span>
+        </div>
+    </div>
+
+    <p style="text-align: center; margin-top: 40px; color: #777;">
+        Clique em um cartão para copiar a classe.<br>
+        Para usar, coloque: <code>&lt;i class="ph NOME-DA-CLASSE"&gt;&lt;/i&gt;</code>
+    </p>
+
+    <script>
+        function copiar(classe) {
+            const texto = `<i class="ph ${classe}"></i>`;
+            navigator.clipboard.writeText(texto).then(() => {
+                alert('Código copiado: ' + texto);
+            });
+        }
+    </script>
+
+</body>
+</html>
