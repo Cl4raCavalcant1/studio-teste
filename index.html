@@ -19,7 +19,7 @@
     <style>
         /* =========================================
            1. VARIÁVEIS & TEMA
-           ========================================= */
+        ========================================= */
         :root {
             --primary: #b7924b;
             --primary-hover: #8c6d32;
@@ -54,7 +54,7 @@
 
         /* =========================================
            2. RESET & BASE
-           ========================================= */
+        ========================================= */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
 
         body {
@@ -67,7 +67,7 @@
 
         /* =========================================
            3. ESTRUTURA (LAYOUT)
-           ========================================= */
+        ========================================= */
         .layout {
             display: grid;
             grid-template-columns: 260px 1fr;
@@ -87,11 +87,12 @@
         .main-content {
             padding: 30px;
             overflow-y: auto;
+            position: relative;
         }
 
         /* =========================================
            4. COMPONENTES VISUAIS
-           ========================================= */
+        ========================================= */
         
         /* --- BRAND (LOGO) --- */
         .brand {
@@ -110,6 +111,8 @@
             height: auto;
             object-fit: contain;
             display: block;
+            pointer-events: none;
+            user-select: none;
         }
 
         .nav-menu { display: flex; flex-direction: column; gap: 8px; flex: 1; }
@@ -223,6 +226,26 @@
             #mobile-toggle { display: block !important; }
         }
         #mobile-toggle { display: none; background: none; border: none; color: var(--text-main); font-size: 24px; cursor: pointer; }
+
+        /* =========================================
+           HOME WATERMARK (LOGO COMO MARCA D'ÁGUA)
+        ========================================= */
+        #home-watermark {
+            position: absolute;
+            left: 50%;
+            top: 35%;
+            transform: translate(-50%, -50%);
+            opacity: 0.08;
+            pointer-events: none;
+            user-select: none;
+            z-index: 1;
+            display: none; /* só mostra na home */
+        }
+        #home-watermark img { max-width: 480px; width: 45vw; max-height: 280px; }
+
+        /* Ajuste para que conteúdo fique acima da marca d'água */
+        .main-content > .card, .main-content > * { position: relative; z-index: 2; }
+
     </style>
 </head>
 <body data-theme="light">
@@ -232,7 +255,7 @@
         <aside class="sidebar">
             <div class="brand">
                 <!-- AQUI: Substitua o link do placeholder pelo caminho da sua imagem (ex: 'logo.png') -->
-                <img src="logo.png.png" alt="Studio Albany Logo" class="brand-logo">
+                <img src="logo.png" alt="Studio Albany Logo" class="brand-logo">
                 
                 <button id="mobile-toggle" onclick="document.getElementById('navMenu').classList.toggle('mobile-open')">
                     <i class="ph ph-list"></i>
@@ -265,6 +288,8 @@
 
         <!-- MAIN -->
         <main class="main-content" id="content">
+            <!-- Marca d'água da Home -->
+            <div id="home-watermark"><img src="logo.png" alt="Marca Albany"></div>
             <!-- O conteúdo será injetado pelo script.js -->
         </main>
     </div>
