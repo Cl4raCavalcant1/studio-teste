@@ -36,7 +36,7 @@ function nav(p) {
     if (p === "dashboard") renderDashboard();
     if (p === "eventos") renderEventos();
 
-    // NOVA FUNÇÃO: Esconde a barra de navegação após o clique
+    // NOVA FUNÇÃO: Esconde a barra de navegação após o clique (SÓ NO CELULAR)
     esconderMenuAposClique();
 }
 
@@ -757,6 +757,17 @@ function renderEventos() {
         
         <div id="div_ev_hora">
             <label>Hora</label><input type="time" id="ev_hora">
+            
+            <!-- CAMPO DE DURAÇÃO ADICIONADO -->
+            <label style="margin-top:10px; display:block;">Duração Estimada</label>
+            <select id="ev_duracao">
+                <option value="">Selecione</option>
+                <option value="1 a 2 horas">1 a 2 horas</option>
+                <option value="2 a 3 horas">2 a 3 horas</option>
+                <option value="3 a 4 horas">3 a 4 horas</option>
+                <option value="4 a 5 horas">4 a 5 horas</option>
+                <option value="5+ horas">Mais de 5 horas</option>
+            </select>
         </div>
         
         <button class="btn" style="margin-top:15px" onclick="saveEvento()">Salvar Evento</button>
@@ -779,10 +790,11 @@ function saveEvento() {
     const data = document.getElementById("ev_data").value;
     const diaInteiro = document.getElementById("ev_diaInteiro").value === "sim";
     const hora = diaInteiro ? null : document.getElementById("ev_hora").value;
+    const duracao = diaInteiro ? null : document.getElementById("ev_duracao").value; // PEGA A DURAÇÃO
 
     if(!cli || !data) return alert("Preencha os dados");
 
-    EV.push({ id: Date.now(), cliente: cli, tipo, data, hora, diaInteiro });
+    EV.push({ id: Date.now(), cliente: cli, tipo, data, hora, diaInteiro, duracao }); // SALVA DURAÇÃO
     save("albany_eventos", EV);
     renderEventos();
 }
@@ -791,12 +803,13 @@ function showEventosList() {
     const div = document.getElementById("ev_list");
     let html = "";
     EV.forEach(e => {
+        // MOSTRA DURAÇÃO NA LISTA
         html += `
         <div style="border-bottom:1px solid var(--border); padding:10px; display:flex; justify-content:space-between; align-items:center;">
             <div>
                 <strong>${e.data.split('-').reverse().join('/')}</strong> - ${e.tipo} (${e.cliente})
                 <i class="ph ph-copy" style="cursor:pointer; margin-left:5px;" onclick="copiarTexto('${e.cliente}')" title="Copiar Nome"></i>
-                <br><small>${e.diaInteiro ? "Dia Todo" : "Às " + e.hora}</small>
+                <br><small>${e.diaInteiro ? "Dia Todo" : "Às " + e.hora + (e.duracao ? " (" + e.duracao + ")" : "")}</small>
             </div>
             <div style="display:flex; gap:5px">
                 <button class="btn-whatsapp" onclick="abrirWhatsapp('${e.cliente}', '${e.data}', '${e.hora}', 'evento')">
@@ -821,17 +834,36 @@ function delEvento(id) {
    10. MENU FLUTUANTE / RESPONSIVO
 =========================================================== */
 function setupMenuMobile() {
-    // 1. Cria o botão de Menu Flutuante se não existir
-    if (!document.getElementById('btn-menu-toggle')) {
-        const btn = document.createElement('button');
+    let btn = document.getElementById('btn-menu-toggle');
+    
+    if (!btn) {
+        btn = document.createElement('button');
         btn.id = 'btn-menu-toggle';
-        // Ícone de "Lista"
         btn.innerHTML = '<i class="ph ph-list" style="font-size: 24px;"></i>'; 
-        // Estilo: Fixo no topo direito, cor dourada, redondo
         btn.style.cssText = "position:fixed; top:15px; right:15px; z-index:9999; width:45px; height:45px; border-radius:50%; background:var(--accent, #b7924b); color:#fff; border:none; box-shadow:0 3px 10px rgba(0,0,0,0.3); cursor:pointer; display:flex; align-items:center; justify-content:center;";
         btn.onclick = toggleNavBar;
         document.body.appendChild(btn);
     }
+
+    // Função que controla a visibilidade do botão com base no tamanho da tela
+    function updateVisibility() {
+        if (window.innerWidth > 768) {
+            // PC: Esconde o botão e restaura a barra
+            btn.style.display = 'none';
+            const navBtns = document.querySelectorAll('.nav-btn');
+            if (navBtns.length) {
+                const navContainer = navBtns[0].parentElement;
+                navContainer.style.display = ''; // Restaura display original
+            }
+        } else {
+            // Mobile: Mostra botão
+            btn.style.display = 'flex';
+        }
+    }
+
+    // Ouve redimensionamento da tela (ex: virar o celular)
+    window.addEventListener('resize', updateVisibility);
+    updateVisibility(); // Executa ao iniciar
 }
 
 function toggleNavBar() {
@@ -850,7 +882,9 @@ function toggleNavBar() {
 }
 
 function esconderMenuAposClique() {
-    // Só esconde automaticamente se o botão toggle existir (garante que não quebra desktop se não quiser)
+    // PROTEÇÃO: Só esconde se for tela pequena (menor que 768px)
+    if (window.innerWidth > 768) return;
+
     const btnToggle = document.getElementById('btn-menu-toggle');
     const navBtns = document.querySelectorAll('.nav-btn');
     
