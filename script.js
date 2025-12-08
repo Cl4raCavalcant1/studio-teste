@@ -28,10 +28,6 @@ function nav(p) {
     const btn = document.querySelector(`button[onclick*="'${p}'"]`);
     if(btn) btn.classList.add('active');
 
-    // FECHA O MENU NO CELULAR (classe mobile-open usada no HTML)
-    const navMenu = document.getElementById('navMenu');
-    if (navMenu && navMenu.classList.contains('mobile-open')) navMenu.classList.remove('mobile-open');
-
     // Renderiza a tela correta
     if (p === "home") renderHome();
     if (p === "agenda") renderAgenda();
@@ -47,7 +43,7 @@ function toggleTheme() {
 }
 
 /* ===========================================================
-   3. FUNÇÕES AUXILIARES (WHATSAPP, FORMAT, DATA)
+   3. FUNÇÕES AUXILIARES (WHATSAPP, FORMAT, DATA, COPIAR)
 =========================================================== */
 function formatMoeda(valor) {
     return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -58,7 +54,18 @@ function getClienteTel(nome) {
     return cli ? cli.tel : "";
 }
 
-function abrirWhatsapp(nome, data, hora, tipo = 'confirmacao') {
+// --- NOVA FUNÇÃO DE COPIAR ---
+function copiarTexto(texto) {
+    navigator.clipboard.writeText(texto).then(() => {
+        // Mostra um alerta rápido ou usa o alert padrão
+        alert("Copiado: " + texto);
+    }).catch(err => {
+        console.error('Erro ao copiar', err);
+    });
+}
+
+// ATUALIZADO: Aceita valorFalta para mensagem de cobrança personalizada
+function abrirWhatsapp(nome, data, hora, tipo = 'confirmacao', valorFalta = 0) {
     const tel = getClienteTel(nome);
     if (!tel) return alert(`Telefone do cliente "${nome}" não encontrado no cadastro. Vá em Clientes e adicione.`);
 
@@ -70,7 +77,9 @@ function abrirWhatsapp(nome, data, hora, tipo = 'confirmacao') {
     } else if (tipo === 'evento') {
         msg = `Olá ${nome}, tudo bem? Passando para confirmar os detalhes do seu evento (${tipo}) no dia ${data.split('-').reverse().join('/')}.`;
     } else if (tipo === 'cobranca') {
-        msg = `Olá ${nome}, referente ao seu pacote no Studio Albany, notamos um saldo pendente. Podemos agendar o pagamento?`;
+        // Formata o valor faltante para moeda brasileira
+        const valorFormatado = Number(valorFalta).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        msg = `Olá ${nome}, tudo bem? Aqui é do Studio Albany. Consta em nosso sistema um saldo pendente de ${valorFormatado} referente ao seu pacote. Podemos agendar o pagamento?`;
     }
 
     const link = `https://wa.me/55${telClean}?text=${encodeURIComponent(msg)}`;
@@ -78,8 +87,7 @@ function abrirWhatsapp(nome, data, hora, tipo = 'confirmacao') {
 }
 
 /* ===========================================================
-   HOME — Resumo do Dia + WhatsApp + Notificação
-   (agora também controla a marca d'água)
+   4. HOME — Resumo do Dia + WhatsApp + Notificação
 =========================================================== */
 function renderHome() {
     const hoje = new Date().toISOString().slice(0, 10);
@@ -101,8 +109,9 @@ function renderHome() {
             html += `
             <div style="padding:15px; border-left:6px solid var(--accent); border-radius:8px; background:var(--bg-body); margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                    <strong>${e.diaInteiro ? "Dia inteiro" : e.hora}</strong> — ${e.cliente}<br>
-                    <small>${e.tipo || 'Evento'} ${e.duracao ? '• ' + e.duracao : ''}</small>
+                    <strong>${e.diaInteiro ? "Dia inteiro" : e.hora}</strong> — ${e.cliente}
+                    <i class="ph ph-copy" style="cursor:pointer; margin-left:5px;" onclick="copiarTexto('${e.cliente}')" title="Copiar Nome"></i><br>
+                    <small>${e.tipo || 'Evento'}</small>
                 </div>
                 <button class="btn-whatsapp" onclick="abrirWhatsapp('${e.cliente}', '${e.data}', '${e.hora}', 'evento')">
                     <i class="ph ph-whatsapp-logo"></i> Confirmar
@@ -121,7 +130,8 @@ function renderHome() {
             html += `
             <div style="padding:15px; border-left:5px solid var(--accent); margin:10px 0; border-radius:8px; background:var(--bg-body); display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                    <strong>${a.hora}</strong> — ${a.clienteNome}<br>
+                    <strong>${a.hora}</strong> — ${a.clienteNome}
+                    <i class="ph ph-copy" style="cursor:pointer; margin-left:5px;" onclick="copiarTexto('${a.clienteNome}')" title="Copiar Nome"></i><br>
                     <span class="status-pill st-${a.status}">${a.status}</span>
                 </div>
                 <button class="btn-whatsapp" onclick="abrirWhatsapp('${a.clienteNome}', '${a.data}', '${a.hora}', 'confirmacao')">
@@ -133,39 +143,28 @@ function renderHome() {
     }
 
     content.innerHTML = html;
-
-    // Mostrar marca d'água na Home
-    const watermark = document.getElementById('home-watermark');
-    if (watermark) watermark.style.display = "block";
-
-    // Notificação do navegador (Restaurada completamente)
+    
+    // Notificação do navegador
     if (Notification.permission !== "denied" && (agHoje.length || evHoje.length)) {
         Notification.requestPermission().then(p => {
             if (p === "granted") {
                 const qtd = agHoje.length + evHoje.length;
                 new Notification("Studio Albany", {
                     body: `Você tem ${qtd} compromissos hoje!`,
-                    icon: "https://cdn-icons-png.flaticon.com/512/747/747376.png" // Ícone genérico de calendário
+                    icon: "https://cdn-icons-png.flaticon.com/512/747/747376.png"
                 });
             }
         });
     }
 }
 
-/* Quando mudamos de página para qualquer outra que não a home, escondemos a marca d'água */
-function hideHomeWatermark() {
-    const watermark = document.getElementById('home-watermark');
-    if (watermark) watermark.style.display = "none";
-}
-
 /* ===========================================================
-   5. AGENDA (Completa com Remarcar) + bloqueio por duração de evento
+   5. AGENDA (Completa com Remarcar)
 =========================================================== */
 const HORARIOS = [];
 for (let h = 9; h <= 20; h++) HORARIOS.push(String(h).padStart(2, "0") + ":00");
 
 function renderAgenda() {
-    hideHomeWatermark();
     const content = document.getElementById('content');
     content.innerHTML = `
     <div class='card'>
@@ -210,28 +209,6 @@ function renderAgenda() {
     `;
 }
 
-function parseHour(h) {
-    if (!h) return null;
-    const [hh, mm] = h.split(':').map(x => Number(x));
-    return hh;
-}
-
-/**
- * Retorna um array de horários (HH:00) que devem ser bloqueados
- * com base no evento que começa em 'hora' e tem 'dur' (string: "3h","4h","5h")
- */
-function blockedSlotsForEvent(hora, dur) {
-    if (!hora || !dur || dur === "dia") return []; // dia inteiro tratado separadamente
-    const start = parseHour(hora);
-    const hours = Number(dur.replace('h', ''));
-    const blocked = [];
-    for (let i = 0; i < hours; i++) {
-        const hh = start + i;
-        if (hh >= 0 && hh <= 23) blocked.push(String(hh).padStart(2, '0') + ':00');
-    }
-    return blocked;
-}
-
 function carregarHorarios() {
     const data = document.getElementById("ag_data").value;
     if (!data) return;
@@ -239,24 +216,14 @@ function carregarHorarios() {
     const eventos = EV.filter(e => e.data === data);
     
     const diaBloqueado = eventos.some(e => e.diaInteiro);
-    let horasBloqueadas = eventos.flatMap(e => {
-        if (e.diaInteiro) return HORARIOS.slice(); // todo o dia
-        if (e.duracao) return blockedSlotsForEvent(e.hora, e.duracao);
-        return e.hora ? [e.hora] : [];
-    });
-
-    // inclui também agendamentos normais
-    horasBloqueadas = horasBloqueadas.concat(agendados);
-
-    // normalize unique
-    horasBloqueadas = Array.from(new Set(horasBloqueadas));
+    const horasBloqueadas = eventos.map(e => e.hora);
 
     let html = `<option value="">Selecione</option>`;
     HORARIOS.forEach(h => {
         let disabled = "";
         let texto = h;
         if (diaBloqueado) { disabled = "disabled"; texto += " (Evento Dia Todo)"; }
-        else if (horasBloqueadas.includes(h)) { disabled = "disabled"; texto += " (Ocupado)"; }
+        else if (agendados.includes(h) || horasBloqueadas.includes(h)) { disabled = "disabled"; texto += " (Ocupado)"; }
         html += `<option value="${h}" ${disabled}>${texto}</option>`;
     });
     document.getElementById("ag_hora").innerHTML = html;
@@ -270,7 +237,7 @@ function saveAgenda() {
 
     if (!cliente || !data || !hora) return alert("Preencha todos os campos.");
 
-    // Validação extra de conflito (dia inteiro)
+    // Validação extra de conflito
     if (EV.some(e => e.data === data && e.diaInteiro)) return alert("Dia bloqueado por evento.");
     
     AG.push({ id: Date.now(), clienteNome: cliente, data, hora, status });
@@ -300,10 +267,15 @@ function showAgendaList() {
 
     let html = "";
     list.forEach(a => {
+        // Busca telefone para habilitar copia
+        const tel = getClienteTel(a.clienteNome);
+        
         html += `
         <div style="border-bottom:1px solid var(--border); padding:10px 0; display:flex; justify-content:space-between; align-items:center;">
             <div>
-                <strong>${a.data ? a.data.split('-').reverse().join('/') : ''} - ${a.hora}</strong> - ${a.clienteNome} 
+                <strong>${a.data ? a.data.split('-').reverse().join('/') : ''} - ${a.hora}</strong> - ${a.clienteNome}
+                <i class="ph ph-copy" style="cursor:pointer; margin-left:5px;" onclick="copiarTexto('${a.clienteNome}')" title="Copiar Nome"></i>
+                ${tel ? `<i class="ph ph-phone" style="cursor:pointer; margin-left:5px; font-size:0.9em" onclick="copiarTexto('${tel}')" title="Copiar Tel: ${tel}"></i>` : ''} 
                 <span class="status-pill st-${a.status}">${a.status}</span>
             </div>
             <div style="display:flex; gap:5px;">
@@ -345,16 +317,16 @@ function delAgenda(id) {
 
 /* ===========================================================
    6. CLIENTES
-   (ajustado para permitir Ctrl+C/Ctrl+V usando inputs readonly)
 =========================================================== */
 function renderClientes() {
-    hideHomeWatermark();
     const content = document.getElementById('content');
+    // ALTERAÇÃO: Adicionado maxlength="11" e filtro de números no oninput
     content.innerHTML = `
     <div class='card'>
         <h3>👤 Novo Cliente</h3>
         <label>Nome</label><input id="c_nome">
-        <label>Telefone (WhatsApp)</label><input id="c_tel" placeholder="Ex: 11999999999">
+        <label>Telefone (WhatsApp)</label>
+        <input id="c_tel" type="tel" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')" placeholder="Ex: 11999999999 (Apenas números)">
         <label>Instagram</label><input id="c_insta">
         <label>Obs</label><textarea id="c_obs"></textarea>
         <button class="btn" style="margin-top:15px;" onclick="saveCliente()">Salvar Cliente</button>
@@ -379,12 +351,7 @@ function saveCliente() {
 
 function showClientes() {
     const termo = (document.getElementById("c_search")?.value || "").toLowerCase();
-    // busca por nome, telefone ou instagram
-    const lista = CL.filter(c =>
-        (c.nome || "").toLowerCase().includes(termo) ||
-        (c.tel || "").toLowerCase().includes(termo) ||
-        (c.insta || "").toLowerCase().includes(termo)
-    );
+    const lista = CL.filter(c => c.nome.toLowerCase().includes(termo));
     const div = document.getElementById("c_list");
 
     if(!lista.length) { div.innerHTML = "<p>Nenhum cliente.</p>"; return; }
@@ -392,10 +359,16 @@ function showClientes() {
     let html = `<table><thead><tr><th>Nome</th><th>Tel</th><th>Ações</th></tr></thead><tbody>`;
     lista.forEach(c => {
         const telClean = c.tel ? c.tel.replace(/\D/g, '') : '';
-        // usamos inputs readonly para permitir seleção e Ctrl+C/Ctrl+V
+        // ALTERAÇÃO: Adicionado ícone de copiar ao lado do nome e telefone
         html += `<tr>
-            <td>${c.nome}</td>
-            <td><input value="${c.tel || ''}" readonly style="border:none; background:transparent; padding:0; font-size:14px;"></td>
+            <td>
+                ${c.nome} 
+                <i class="ph ph-copy" style="cursor:pointer; opacity:0.6;" onclick="copiarTexto('${c.nome}')" title="Copiar Nome"></i>
+            </td>
+            <td>
+                ${c.tel}
+                <i class="ph ph-copy" style="cursor:pointer; opacity:0.6;" onclick="copiarTexto('${c.tel}')" title="Copiar Tel"></i>
+            </td>
             <td style="display:flex; gap:5px;">
                 ${telClean ? `<a href="https://wa.me/55${telClean}" target="_blank" class="btn-whatsapp" style="padding:5px 8px;"><i class="ph ph-whatsapp-logo"></i></a>` : ''}
                 <button class="btn danger" onclick="delCliente(${c.id})" style="padding:5px 8px;"><i class="ph ph-trash"></i></button>
@@ -416,10 +389,8 @@ function delCliente(id) {
 
 /* ===========================================================
    7. FINANCEIRO & VENDAS
-   (mantive lógica, apenas garanti busca por nome de cliente)
 =========================================================== */
 function renderPagamentos() {
-    hideHomeWatermark();
     const content = document.getElementById('content');
     content.innerHTML = `
     <div class='card'>
@@ -537,23 +508,29 @@ function showPagamentos() {
 
     lista.forEach(v => {
         const pago = totalPago(v);
+        const falta = Math.max(0, v.total - pago); // Calcula valor que falta
+
         // Status Lógica
         let stClass = "st-cancelado"; 
         let stLabel = "Pendente";
         if(pago >= v.total - 0.1) { stClass = "st-confirmado"; stLabel = "Pago"; }
         else if(pago > 0) { stClass = "st-parcial"; stLabel = "Parcial"; }
 
+        // ALTERAÇÃO: Adicionado ícone de copiar ao lado do nome e passado "falta" para o whatsapp
         html += `
         <tr>
             <td>${new Date(v.createdAt).toLocaleDateString()}</td>
-            <td>${v.nome}<br><small>${v.pacote}</small></td>
+            <td>
+                ${v.nome} <i class="ph ph-copy" style="cursor:pointer; opacity:0.6;" onclick="copiarTexto('${v.nome}')" title="Copiar Nome"></i>
+                <br><small>${v.pacote}</small>
+            </td>
             <td>${formatMoeda(v.total)}</td>
             <td>${formatMoeda(pago)}</td>
             <td><span class="status-pill ${stClass}">${stLabel}</span></td>
             <td style="display:flex; gap:5px">
                 <button class="btn" style="padding:5px 8px" onclick="openPagamentoDetalhes(${v.id})">Detalhes</button>
                 <button class="btn ghost" style="padding:5px 8px" title="Comprovante Individual" onclick="baixarVendaPDF(${v.id})">📄</button>
-                <button class="btn-whatsapp" style="padding:5px 8px" onclick="abrirWhatsapp('${v.nome}', '', '', 'cobranca')"><i class="ph ph-whatsapp-logo"></i></button>
+                <button class="btn-whatsapp" style="padding:5px 8px" onclick="abrirWhatsapp('${v.nome}', '', '', 'cobranca', ${falta})"><i class="ph ph-whatsapp-logo"></i></button>
                 <button class="btn danger" style="padding:5px 8px" onclick="delVenda(${v.id})">X</button>
             </td>
         </tr>`;
@@ -680,7 +657,6 @@ function baixarVendaPDF(id) {
    8. DASHBOARD COM GRÁFICOS
 =========================================================== */
 function renderDashboard() {
-    hideHomeWatermark();
     const content = document.getElementById('content');
     
     // 1. Cálculos de KPIs
@@ -774,10 +750,9 @@ function gerarGraficos() {
 }
 
 /* ===========================================================
-   9. EVENTOS (Toggle Horário, Tipos expandidos, Duração)
+   9. EVENTOS (Restaurado Toggle Horário)
 =========================================================== */
 function renderEventos() {
-    hideHomeWatermark();
     const content = document.getElementById('content');
     content.innerHTML = `
     <div class='card'>
@@ -786,15 +761,7 @@ function renderEventos() {
         <select id="ev_cliente">${CL.map(c => `<option value="${c.nome}">${c.nome}</option>`).join("")}</select>
         <label>Tipo</label>
         <select id="ev_tipo">
-            <option>Ensaio de Formatura Externo</option>
-            <option>Formatura</option>
-            <option>Casamento</option>
-            <option>Batizado</option>
-            <option>Chá de Fraldas</option>
-            <option>Making of de casamento</option>
-            <option>Pre Wedding</option>
-            <option>Ensaio Externo</option>
-            <option>Inauguração Loja</option>
+            <option>Casamento</option><option>Aniversário</option><option>Formatura</option><option>Batizado</option>
             <option>Outros</option>
         </select>
         <label>Data</label><input type="date" id="ev_data">
@@ -807,22 +774,12 @@ function renderEventos() {
         
         <div id="div_ev_hora">
             <label>Hora</label><input type="time" id="ev_hora">
-            <label>Duração</label>
-            <select id="ev_duracao">
-                <option value="3h">3 horas</option>
-                <option value="4h">4 horas</option>
-                <option value="5h">5 horas</option>
-                <option value="dia">Dia Inteiro</option>
-            </select>
         </div>
         
         <button class="btn" style="margin-top:15px" onclick="saveEvento()">Salvar Evento</button>
     </div>
     <div class="card">
         <h3>Lista de Eventos</h3>
-        <div style="display:flex; gap:10px; margin-bottom:10px;">
-            <input id="ev_search" placeholder="Pesquisar evento/cliente..." oninput="showEventosList()">
-        </div>
         <div id="ev_list"></div>
     </div>`;
     showEventosList();
@@ -839,36 +796,25 @@ function saveEvento() {
     const data = document.getElementById("ev_data").value;
     const diaInteiro = document.getElementById("ev_diaInteiro").value === "sim";
     const hora = diaInteiro ? null : document.getElementById("ev_hora").value;
-    const duracao = diaInteiro ? "dia" : (document.getElementById("ev_duracao")?.value || null);
 
     if(!cli || !data) return alert("Preencha os dados");
 
-    EV.push({ id: Date.now(), cliente: cli, tipo, data, hora, diaInteiro, duracao });
+    EV.push({ id: Date.now(), cliente: cli, tipo, data, hora, diaInteiro });
     save("albany_eventos", EV);
     renderEventos();
 }
 
 function showEventosList() {
-    const termo = (document.getElementById("ev_search")?.value || "").toLowerCase();
     const div = document.getElementById("ev_list");
-    let lista = EV;
-
-    if (termo) {
-        lista = EV.filter(e =>
-            (e.cliente || "").toLowerCase().includes(termo) ||
-            (e.tipo || "").toLowerCase().includes(termo)
-        );
-    }
-
-    if(!lista.length) { div.innerHTML = "<p>Nenhum evento.</p>"; return; }
-
     let html = "";
-    lista.forEach(e => {
+    EV.forEach(e => {
+        // ALTERAÇÃO: Adicionado ícone de copiar
         html += `
         <div style="border-bottom:1px solid var(--border); padding:10px; display:flex; justify-content:space-between; align-items:center;">
             <div>
                 <strong>${e.data.split('-').reverse().join('/')}</strong> - ${e.tipo} (${e.cliente})
-                <br><small>${e.diaInteiro ? "Dia Todo" : "Às " + e.hora} ${e.duracao && e.duracao!=='dia' ? '• ' + e.duracao : ''}</small>
+                <i class="ph ph-copy" style="cursor:pointer; margin-left:5px;" onclick="copiarTexto('${e.cliente}')" title="Copiar Nome"></i>
+                <br><small>${e.diaInteiro ? "Dia Todo" : "Às " + e.hora}</small>
             </div>
             <div style="display:flex; gap:5px">
                 <button class="btn-whatsapp" onclick="abrirWhatsapp('${e.cliente}', '${e.data}', '${e.hora}', 'evento')">
@@ -878,7 +824,7 @@ function showEventosList() {
             </div>
         </div>`;
     });
-    div.innerHTML = html;
+    div.innerHTML = html || "<p>Nenhum evento.</p>";
 }
 
 function delEvento(id) {
