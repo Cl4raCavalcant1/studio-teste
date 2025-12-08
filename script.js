@@ -35,6 +35,9 @@ function nav(p) {
     if (p === "vendas" || p === "pagamentos") renderPagamentos();
     if (p === "dashboard") renderDashboard();
     if (p === "eventos") renderEventos();
+
+    // NOVA FUNÇÃO: Esconde a barra de navegação após o clique
+    esconderMenuAposClique();
 }
 
 function toggleTheme() {
@@ -54,17 +57,14 @@ function getClienteTel(nome) {
     return cli ? cli.tel : "";
 }
 
-// --- NOVA FUNÇÃO DE COPIAR ---
 function copiarTexto(texto) {
     navigator.clipboard.writeText(texto).then(() => {
-        // Mostra um alerta rápido ou usa o alert padrão
         alert("Copiado: " + texto);
     }).catch(err => {
         console.error('Erro ao copiar', err);
     });
 }
 
-// ATUALIZADO: Aceita valorFalta para mensagem de cobrança personalizada
 function abrirWhatsapp(nome, data, hora, tipo = 'confirmacao', valorFalta = 0) {
     const tel = getClienteTel(nome);
     if (!tel) return alert(`Telefone do cliente "${nome}" não encontrado no cadastro. Vá em Clientes e adicione.`);
@@ -77,7 +77,6 @@ function abrirWhatsapp(nome, data, hora, tipo = 'confirmacao', valorFalta = 0) {
     } else if (tipo === 'evento') {
         msg = `Olá ${nome}, tudo bem? Passando para confirmar os detalhes do seu evento (${tipo}) no dia ${data.split('-').reverse().join('/')}.`;
     } else if (tipo === 'cobranca') {
-        // Formata o valor faltante para moeda brasileira
         const valorFormatado = Number(valorFalta).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         msg = `Olá ${nome}, tudo bem? Aqui é do Studio Albany. Consta em nosso sistema um saldo pendente de ${valorFormatado} referente ao seu pacote. Podemos agendar o pagamento?`;
     }
@@ -87,7 +86,7 @@ function abrirWhatsapp(nome, data, hora, tipo = 'confirmacao', valorFalta = 0) {
 }
 
 /* ===========================================================
-   4. HOME — Resumo do Dia + WhatsApp + Notificação
+   4. HOME
 =========================================================== */
 function renderHome() {
     const hoje = new Date().toISOString().slice(0, 10);
@@ -144,7 +143,6 @@ function renderHome() {
 
     content.innerHTML = html;
     
-    // Notificação do navegador
     if (Notification.permission !== "denied" && (agHoje.length || evHoje.length)) {
         Notification.requestPermission().then(p => {
             if (p === "granted") {
@@ -159,7 +157,7 @@ function renderHome() {
 }
 
 /* ===========================================================
-   5. AGENDA (Completa com Remarcar)
+   5. AGENDA
 =========================================================== */
 const HORARIOS = [];
 for (let h = 9; h <= 20; h++) HORARIOS.push(String(h).padStart(2, "0") + ":00");
@@ -237,7 +235,6 @@ function saveAgenda() {
 
     if (!cliente || !data || !hora) return alert("Preencha todos os campos.");
 
-    // Validação extra de conflito
     if (EV.some(e => e.data === data && e.diaInteiro)) return alert("Dia bloqueado por evento.");
     
     AG.push({ id: Date.now(), clienteNome: cliente, data, hora, status });
@@ -250,7 +247,6 @@ function showAgendaList() {
     const d = document.getElementById("ag_filter").value;
     const termo = (document.getElementById("ag_search").value || "").toLowerCase();
     
-    // Se não tiver data selecionada, tenta mostrar algo ou pede data
     if (!d && !termo) { 
         document.getElementById("ag_list").innerHTML = "<p>Selecione uma data ou pesquise por nome.</p>";
         return; 
@@ -267,9 +263,7 @@ function showAgendaList() {
 
     let html = "";
     list.forEach(a => {
-        // Busca telefone para habilitar copia
         const tel = getClienteTel(a.clienteNome);
-        
         html += `
         <div style="border-bottom:1px solid var(--border); padding:10px 0; display:flex; justify-content:space-between; align-items:center;">
             <div>
@@ -296,8 +290,6 @@ function remarcar(id) {
     const novoHora = prompt("Novo horário (HH:MM):", ag.hora);
 
     if (!novaData || !novoHora) return;
-
-    // Simples validação
     if (EV.some(e => e.data === novaData && e.diaInteiro)) return alert("Dia bloqueado!");
     
     ag.data = novaData;
@@ -320,7 +312,6 @@ function delAgenda(id) {
 =========================================================== */
 function renderClientes() {
     const content = document.getElementById('content');
-    // ALTERAÇÃO: Adicionado maxlength="11" e filtro de números no oninput
     content.innerHTML = `
     <div class='card'>
         <h3>👤 Novo Cliente</h3>
@@ -359,7 +350,6 @@ function showClientes() {
     let html = `<table><thead><tr><th>Nome</th><th>Tel</th><th>Ações</th></tr></thead><tbody>`;
     lista.forEach(c => {
         const telClean = c.tel ? c.tel.replace(/\D/g, '') : '';
-        // ALTERAÇÃO: Adicionado ícone de copiar ao lado do nome e telefone
         html += `<tr>
             <td>
                 ${c.nome} 
@@ -508,15 +498,13 @@ function showPagamentos() {
 
     lista.forEach(v => {
         const pago = totalPago(v);
-        const falta = Math.max(0, v.total - pago); // Calcula valor que falta
+        const falta = Math.max(0, v.total - pago); 
 
-        // Status Lógica
         let stClass = "st-cancelado"; 
         let stLabel = "Pendente";
         if(pago >= v.total - 0.1) { stClass = "st-confirmado"; stLabel = "Pago"; }
         else if(pago > 0) { stClass = "st-parcial"; stLabel = "Parcial"; }
 
-        // ALTERAÇÃO: Adicionado ícone de copiar ao lado do nome e passado "falta" para o whatsapp
         html += `
         <tr>
             <td>${new Date(v.createdAt).toLocaleDateString()}</td>
@@ -596,8 +584,8 @@ function addPagamento(id) {
     
     save("albany_vendas", VD);
     alert("Pagamento adicionado!");
-    openPagamentoDetalhes(id); // Recarrega detalhes
-    showPagamentos(); // Recarrega lista
+    openPagamentoDetalhes(id); 
+    showPagamentos(); 
 }
 
 function delVenda(id) {
@@ -624,7 +612,6 @@ function baixarPDF() {
     a.click();
 }
 
-// FUNÇÃO RESTAURADA: Comprovante Individual
 function baixarVendaPDF(id) {
     const v = VD.find(x => x.id === id);
     if (!v) return;
@@ -659,12 +646,10 @@ function baixarVendaPDF(id) {
 function renderDashboard() {
     const content = document.getElementById('content');
     
-    // 1. Cálculos de KPIs
     const totalFaturado = VD.reduce((acc, v) => acc + Number(v.total), 0);
     const totalVendas = VD.length;
     const totalCortesiasPerdidas = VD.reduce((acc, v) => acc + Number(v.valorCortesia || 0), 0);
 
-    // 2. HTML Estrutural
     content.innerHTML = `
     <div class="dashboard-grid">
         <div class="kpi-card">
@@ -700,7 +685,6 @@ function renderDashboard() {
 }
 
 function gerarGraficos() {
-    // --- GRÁFICO 1 ---
     const dadosMes = {}; 
     VD.forEach(v => {
         const mes = v.createdAt.slice(0, 7); 
@@ -727,7 +711,6 @@ function gerarGraficos() {
         options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // --- GRÁFICO 2 ---
     const dadosTipos = {};
     EV.forEach(e => {
         const t = e.tipo || "Outros";
@@ -750,7 +733,7 @@ function gerarGraficos() {
 }
 
 /* ===========================================================
-   9. EVENTOS (Restaurado Toggle Horário)
+   9. EVENTOS
 =========================================================== */
 function renderEventos() {
     const content = document.getElementById('content');
@@ -808,7 +791,6 @@ function showEventosList() {
     const div = document.getElementById("ev_list");
     let html = "";
     EV.forEach(e => {
-        // ALTERAÇÃO: Adicionado ícone de copiar
         html += `
         <div style="border-bottom:1px solid var(--border); padding:10px; display:flex; justify-content:space-between; align-items:center;">
             <div>
@@ -835,10 +817,55 @@ function delEvento(id) {
     }
 }
 
-// RESTAURADO: Service Worker (para funcionar melhor em celulares)
+/* ===========================================================
+   10. MENU FLUTUANTE / RESPONSIVO
+=========================================================== */
+function setupMenuMobile() {
+    // 1. Cria o botão de Menu Flutuante se não existir
+    if (!document.getElementById('btn-menu-toggle')) {
+        const btn = document.createElement('button');
+        btn.id = 'btn-menu-toggle';
+        // Ícone de "Lista"
+        btn.innerHTML = '<i class="ph ph-list" style="font-size: 24px;"></i>'; 
+        // Estilo: Fixo no topo direito, cor dourada, redondo
+        btn.style.cssText = "position:fixed; top:15px; right:15px; z-index:9999; width:45px; height:45px; border-radius:50%; background:var(--accent, #b7924b); color:#fff; border:none; box-shadow:0 3px 10px rgba(0,0,0,0.3); cursor:pointer; display:flex; align-items:center; justify-content:center;";
+        btn.onclick = toggleNavBar;
+        document.body.appendChild(btn);
+    }
+}
+
+function toggleNavBar() {
+    // Tenta encontrar o container dos botões de navegação
+    const navBtns = document.querySelectorAll('.nav-btn');
+    if (!navBtns.length) return;
+    
+    // Assume que o pai dos botões é a barra de navegação
+    const navContainer = navBtns[0].parentElement;
+    
+    if (navContainer.style.display === 'none') {
+        navContainer.style.display = ''; // Mostra novamente
+    } else {
+        navContainer.style.display = 'none'; // Esconde
+    }
+}
+
+function esconderMenuAposClique() {
+    // Só esconde automaticamente se o botão toggle existir (garante que não quebra desktop se não quiser)
+    const btnToggle = document.getElementById('btn-menu-toggle');
+    const navBtns = document.querySelectorAll('.nav-btn');
+    
+    if (btnToggle && navBtns.length) {
+        const navContainer = navBtns[0].parentElement;
+        // Esconde a barra
+        navContainer.style.display = 'none';
+    }
+}
+
 if ("serviceWorker" in navigator) {
     try { navigator.serviceWorker.register("sw.js"); } catch (err) {}
 }
 
 // INICIA NA HOME
 renderHome();
+// CONFIGURA O MENU FLUTUANTE
+setupMenuMobile();
