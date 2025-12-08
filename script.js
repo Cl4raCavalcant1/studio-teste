@@ -35,9 +35,6 @@ function nav(p) {
     if (p === "vendas" || p === "pagamentos") renderPagamentos();
     if (p === "dashboard") renderDashboard();
     if (p === "eventos") renderEventos();
-
-    // NOVA FUNÇÃO: Esconde a barra de navegação após o clique (SÓ NO CELULAR)
-    esconderMenuAposClique();
 }
 
 function toggleTheme() {
@@ -830,76 +827,10 @@ function delEvento(id) {
     }
 }
 
-/* ===========================================================
-   10. MENU FLUTUANTE / RESPONSIVO
-=========================================================== */
-function setupMenuMobile() {
-    let btn = document.getElementById('btn-menu-toggle');
-    
-    if (!btn) {
-        btn = document.createElement('button');
-        btn.id = 'btn-menu-toggle';
-        btn.innerHTML = '<i class="ph ph-list" style="font-size: 24px;"></i>'; 
-        btn.style.cssText = "position:fixed; top:15px; right:15px; z-index:9999; width:45px; height:45px; border-radius:50%; background:var(--accent, #b7924b); color:#fff; border:none; box-shadow:0 3px 10px rgba(0,0,0,0.3); cursor:pointer; display:flex; align-items:center; justify-content:center;";
-        btn.onclick = toggleNavBar;
-        document.body.appendChild(btn);
-    }
-
-    // Função que controla a visibilidade do botão com base no tamanho da tela
-    function updateVisibility() {
-        if (window.innerWidth > 768) {
-            // PC: Esconde o botão e restaura a barra
-            btn.style.display = 'none';
-            const navBtns = document.querySelectorAll('.nav-btn');
-            if (navBtns.length) {
-                const navContainer = navBtns[0].parentElement;
-                navContainer.style.display = ''; // Restaura display original
-            }
-        } else {
-            // Mobile: Mostra botão
-            btn.style.display = 'flex';
-        }
-    }
-
-    // Ouve redimensionamento da tela (ex: virar o celular)
-    window.addEventListener('resize', updateVisibility);
-    updateVisibility(); // Executa ao iniciar
-}
-
-function toggleNavBar() {
-    // Tenta encontrar o container dos botões de navegação
-    const navBtns = document.querySelectorAll('.nav-btn');
-    if (!navBtns.length) return;
-    
-    // Assume que o pai dos botões é a barra de navegação
-    const navContainer = navBtns[0].parentElement;
-    
-    if (navContainer.style.display === 'none') {
-        navContainer.style.display = ''; // Mostra novamente
-    } else {
-        navContainer.style.display = 'none'; // Esconde
-    }
-}
-
-function esconderMenuAposClique() {
-    // PROTEÇÃO: Só esconde se for tela pequena (menor que 768px)
-    if (window.innerWidth > 768) return;
-
-    const btnToggle = document.getElementById('btn-menu-toggle');
-    const navBtns = document.querySelectorAll('.nav-btn');
-    
-    if (btnToggle && navBtns.length) {
-        const navContainer = navBtns[0].parentElement;
-        // Esconde a barra
-        navContainer.style.display = 'none';
-    }
-}
-
+// RESTAURADO: Service Worker (para funcionar melhor em celulares)
 if ("serviceWorker" in navigator) {
     try { navigator.serviceWorker.register("sw.js"); } catch (err) {}
 }
 
 // INICIA NA HOME
 renderHome();
-// CONFIGURA O MENU FLUTUANTE
-setupMenuMobile();
