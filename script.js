@@ -18,6 +18,7 @@ let EV = load("albany_eventos");
 // Variáveis globais para os Gráficos
 let chartFaturamentoInstance = null;
 let chartTiposInstance = null;
+let chartFinanceiroInstance = null; // Nova variável para o gráfico financeiro
 
 /* ===========================================================
    2. NAVEGAÇÃO E TEMA
@@ -164,13 +165,15 @@ function renderAgenda() {
     content.innerHTML = `
     <div class='card'>
         <h3>📅 Novo Agendamento</h3>
-        <label>Cliente</label>
-        <select id="ag_cliente">
-            <option value="">Selecione</option>
-            ${CL.map(c => `<option value="${c.nome}">${c.nome}</option>`).join("")}
-        </select>
+        <label>Cliente (Busque pelo nome)</label>
         
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+        <!-- CAMPO DE PESQUISA (AUTOCOMPLETE) -->
+        <input list="dl_clientes" id="ag_cliente" placeholder="Digite para pesquisar..." style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-input); color:var(--text-main);">
+        <datalist id="dl_clientes">
+            ${CL.map(c => `<option value="${c.nome}">`).join("")}
+        </datalist>
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top:15px;">
             <div>
                 <label>Data</label>
                 <input type="date" id="ag_data" onchange="carregarHorarios()">
@@ -666,13 +669,18 @@ function renderDashboard() {
         </div>
     </div>
 
-    <div class="charts-row">
+    <!-- Layout Grid para 3 Gráficos -->
+    <div class="charts-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
         <div class="card">
-            <h3>📈 Faturamento vs Cortesias (Últimos Meses)</h3>
+            <h3>📈 Faturamento vs Cortesias (Mensal)</h3>
             <div class="chart-box"><canvas id="chartFaturamento"></canvas></div>
         </div>
         <div class="card">
-            <h3> Tipos de Eventos</h3>
+            <h3>💰 Receita Real vs Perda (Total)</h3>
+            <div class="chart-box"><canvas id="chartFinanceiro"></canvas></div>
+        </div>
+        <div class="card">
+            <h3>🎭 Tipos de Eventos</h3>
             <div class="chart-box"><canvas id="chartTipos"></canvas></div>
         </div>
     </div>
@@ -682,12 +690,19 @@ function renderDashboard() {
 }
 
 function gerarGraficos() {
+    // 1. DADOS MENSAIS (BARRAS)
     const dadosMes = {}; 
+    let totalFatGeral = 0;
+    let totalCortGeral = 0;
+
     VD.forEach(v => {
         const mes = v.createdAt.slice(0, 7); 
         if (!dadosMes[mes]) dadosMes[mes] = { faturamento: 0, cortesia: 0 };
         dadosMes[mes].faturamento += Number(v.total);
         dadosMes[mes].cortesia += Number(v.valorCortesia || 0);
+
+        totalFatGeral += Number(v.total);
+        totalCortGeral += Number(v.valorCortesia || 0);
     });
 
     const labelsMes = Object.keys(dadosMes).sort();
@@ -708,6 +723,39 @@ function gerarGraficos() {
         options: { responsive: true, maintainAspectRatio: false }
     });
 
+    // 2. FINANCEIRO TOTAL (PIZZA) - NOVO GRÁFICO
+    if(chartFinanceiroInstance) chartFinanceiroInstance.destroy();
+    const ctx3 = document.getElementById('chartFinanceiro').getContext('2d');
+    chartFinanceiroInstance = new Chart(ctx3, {
+        type: 'pie',
+        data: {
+            labels: ['Receita Real', 'Perda em Cortesias'],
+            datasets: [{
+                data: [totalFatGeral, totalCortGeral],
+                backgroundColor: ['#2e7d32', '#c62828']
+            }]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) { label += ': '; }
+                            if (context.parsed !== null) {
+                                label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // 3. TIPOS DE EVENTOS (ROSQUINHA)
     const dadosTipos = {};
     EV.forEach(e => {
         const t = e.tipo || "Outros";
@@ -737,9 +785,15 @@ function renderEventos() {
     content.innerHTML = `
     <div class='card'>
         <h3>🎪 Novo Evento</h3>
-        <label>Cliente</label>
-        <select id="ev_cliente">${CL.map(c => `<option value="${c.nome}">${c.nome}</option>`).join("")}</select>
-        <label>Tipo</label>
+        <label>Cliente (Busque pelo nome)</label>
+        
+        <!-- CAMPO DE PESQUISA (AUTOCOMPLETE) -->
+        <input list="dl_ev_clientes" id="ev_cliente" placeholder="Digite para pesquisar..." style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-input); color:var(--text-main);">
+        <datalist id="dl_ev_clientes">
+            ${CL.map(c => `<option value="${c.nome}">`).join("")}
+        </datalist>
+
+        <label style="margin-top:15px; display:block">Tipo</label>
         <select id="ev_tipo">
             <option>Casamento</option><option>Aniversário</option><option>Formatura</option><option>Batizado</option>
             <option>Outros</option>
@@ -755,7 +809,7 @@ function renderEventos() {
         <div id="div_ev_hora">
             <label>Hora</label><input type="time" id="ev_hora">
             
-            <!-- CAMPO DE DURAÇÃO ADICIONADO -->
+            <!-- CAMPO DE DURAÇÃO -->
             <label style="margin-top:10px; display:block;">Duração Estimada</label>
             <select id="ev_duracao">
                 <option value="">Selecione</option>
@@ -787,11 +841,11 @@ function saveEvento() {
     const data = document.getElementById("ev_data").value;
     const diaInteiro = document.getElementById("ev_diaInteiro").value === "sim";
     const hora = diaInteiro ? null : document.getElementById("ev_hora").value;
-    const duracao = diaInteiro ? null : document.getElementById("ev_duracao").value; // PEGA A DURAÇÃO
+    const duracao = diaInteiro ? null : document.getElementById("ev_duracao").value; 
 
     if(!cli || !data) return alert("Preencha os dados");
 
-    EV.push({ id: Date.now(), cliente: cli, tipo, data, hora, diaInteiro, duracao }); // SALVA DURAÇÃO
+    EV.push({ id: Date.now(), cliente: cli, tipo, data, hora, diaInteiro, duracao }); 
     save("albany_eventos", EV);
     renderEventos();
 }
@@ -800,7 +854,6 @@ function showEventosList() {
     const div = document.getElementById("ev_list");
     let html = "";
     EV.forEach(e => {
-        // MOSTRA DURAÇÃO NA LISTA
         html += `
         <div style="border-bottom:1px solid var(--border); padding:10px; display:flex; justify-content:space-between; align-items:center;">
             <div>
@@ -827,7 +880,7 @@ function delEvento(id) {
     }
 }
 
-// RESTAURADO: Service Worker (para funcionar melhor em celulares)
+// Service Worker
 if ("serviceWorker" in navigator) {
     try { navigator.serviceWorker.register("sw.js"); } catch (err) {}
 }
