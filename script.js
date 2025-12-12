@@ -651,6 +651,47 @@ function renderDashboard() {
     const totalCortesiasPerdidas = VD.reduce((acc, v) => acc + Number(v.valorCortesia || 0), 0);
 
     content.innerHTML = `
+    <style>
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .kpi-card {
+            background: var(--bg-body, #fff); /* Fallback to white if var not defined */
+            border: 1px solid var(--border, #ddd);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+        }
+        .kpi-title {
+            display: block;
+            font-size: 0.9rem;
+            color: var(--text-muted, #6b7280);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        .kpi-value {
+            display: block;
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text-main, #111827);
+            margin: 5px 0;
+        }
+        .kpi-sub {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted, #9ca3af);
+        }
+    </style>
     <div class="dashboard-grid">
         <div class="kpi-card">
             <span class="kpi-title">Faturamento Total</span>
@@ -796,7 +837,7 @@ function renderEventos() {
         <label style="margin-top:15px; display:block">Tipo</label>
         <select id="ev_tipo">
             <option>Casamento</option><option>Aniversário</option><option>Formatura</option><option>Batizado</option>
-            <option>Outros</option>
+            <option> Smash the Cake <option>Outros</option>
         </select>
         <label>Data</label><input type="date" id="ev_data">
         
